@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
@@ -7,8 +6,8 @@ from sqlmodel import select
 
 from app.core.deps import SessionDep
 from app.models.device import Device
-from app.models.enums import DeviceStage, FileStatus
 from app.models.duplicate_group import DuplicateGroup
+from app.models.enums import DeviceStage, FileStatus
 from app.models.file_entry import FileEntry
 
 router = APIRouter(prefix="/duplicate-groups", tags=["duplicate-groups"])
@@ -29,7 +28,7 @@ class FileEntryBrief(BaseModel):
 class DuplicateGroupRead(BaseModel):
     id: int
     content_hash: str
-    canonical_entry_id: Optional[int]
+    canonical_entry_id: int | None
     resolved: bool
     auto_resolved: bool
     total_size_bytes: int
@@ -46,13 +45,17 @@ class ResolveBody(BaseModel):
 def list_duplicate_groups(
     session: SessionDep,
     device_id: int = Query(...),
-    resolved: Optional[bool] = Query(None),
+    resolved: bool | None = Query(None),
 ):
     # Fetch groups whose entries include this device
-    entry_stmt = select(FileEntry.duplicate_group_id).where(
-        FileEntry.device_id == device_id,
-        FileEntry.duplicate_group_id.is_not(None),
-    ).distinct()
+    entry_stmt = (
+        select(FileEntry.duplicate_group_id)
+        .where(
+            FileEntry.device_id == device_id,
+            FileEntry.duplicate_group_id.is_not(None),
+        )
+        .distinct()
+    )
     group_ids = [r for r in session.exec(entry_stmt).all() if r is not None]
 
     # Advance device stage to analyzing when user first opens the resolver
@@ -80,9 +83,7 @@ def list_duplicate_groups(
 
     result = []
     for g in groups:
-        entries = session.exec(
-            select(FileEntry).where(FileEntry.duplicate_group_id == g.id)
-        ).all()
+        entries = session.exec(select(FileEntry).where(FileEntry.duplicate_group_id == g.id)).all()
         result.append(
             DuplicateGroupRead(
                 id=g.id,
@@ -113,11 +114,11 @@ def resolve_group(group_id: int, body: ResolveBody, session: SessionDep):
     session.add(group)
 
     # Mark canonical as keep, rest as discard
-    entries = session.exec(
-        select(FileEntry).where(FileEntry.duplicate_group_id == group_id)
-    ).all()
+    entries = session.exec(select(FileEntry).where(FileEntry.duplicate_group_id == group_id)).all()
     for entry in entries:
-        entry.status = FileStatus.keep if entry.id == body.canonical_entry_id else FileStatus.discard
+        entry.status = (
+            FileStatus.keep if entry.id == body.canonical_entry_id else FileStatus.discard
+        )
         session.add(entry)
 
     session.commit()
@@ -125,10 +126,14 @@ def resolve_group(group_id: int, body: ResolveBody, session: SessionDep):
 
     # If all groups for this device are now resolved, advance stage to analyzed
     device_id = canonical.device_id
-    all_group_ids_stmt = select(FileEntry.duplicate_group_id).where(
-        FileEntry.device_id == device_id,
-        FileEntry.duplicate_group_id.is_not(None),
-    ).distinct()
+    all_group_ids_stmt = (
+        select(FileEntry.duplicate_group_id)
+        .where(
+            FileEntry.device_id == device_id,
+            FileEntry.duplicate_group_id.is_not(None),
+        )
+        .distinct()
+    )
     all_ids = [r for r in session.exec(all_group_ids_stmt).all() if r is not None]
     unresolved = session.exec(
         select(DuplicateGroup).where(
@@ -164,10 +169,14 @@ def auto_resolve(device_id: int, session: SessionDep):
     2. Newest mtime
     3. Lowest device_id (earlier-registered device)
     """
-    entry_stmt = select(FileEntry.duplicate_group_id).where(
-        FileEntry.device_id == device_id,
-        FileEntry.duplicate_group_id.is_not(None),
-    ).distinct()
+    entry_stmt = (
+        select(FileEntry.duplicate_group_id)
+        .where(
+            FileEntry.device_id == device_id,
+            FileEntry.duplicate_group_id.is_not(None),
+        )
+        .distinct()
+    )
     group_ids = [r for r in session.exec(entry_stmt).all() if r is not None]
 
     unresolved = session.exec(
@@ -188,9 +197,9 @@ def auto_resolve(device_id: int, session: SessionDep):
         winner = max(
             entries,
             key=lambda e: (
-                e.path.count("/"),   # deeper path = more organized
-                e.mtime.timestamp(), # newer mtime
-                -e.device_id,        # lower device_id wins (negate for max)
+                e.path.count("/"),  # deeper path = more organized
+                e.mtime.timestamp(),  # newer mtime
+                -e.device_id,  # lower device_id wins (negate for max)
             ),
         )
 
@@ -230,18 +239,20 @@ def auto_resolve(device_id: int, session: SessionDep):
 @router.get("/stats/{device_id}")
 def group_stats(device_id: int, session: SessionDep):
     """Summary counts for the duplicate resolver progress bar."""
-    entry_stmt = select(FileEntry.duplicate_group_id).where(
-        FileEntry.device_id == device_id,
-        FileEntry.duplicate_group_id.is_not(None),
-    ).distinct()
+    entry_stmt = (
+        select(FileEntry.duplicate_group_id)
+        .where(
+            FileEntry.device_id == device_id,
+            FileEntry.duplicate_group_id.is_not(None),
+        )
+        .distinct()
+    )
     group_ids = [r for r in session.exec(entry_stmt).all() if r is not None]
 
     if not group_ids:
         return {"total": 0, "resolved": 0, "unresolved": 0}
 
-    all_groups = session.exec(
-        select(DuplicateGroup).where(DuplicateGroup.id.in_(group_ids))
-    ).all()
+    all_groups = session.exec(select(DuplicateGroup).where(DuplicateGroup.id.in_(group_ids))).all()
     total = len(all_groups)
     resolved = sum(1 for g in all_groups if g.resolved)
     return {"total": total, "resolved": resolved, "unresolved": total - resolved}

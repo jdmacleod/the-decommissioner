@@ -225,6 +225,61 @@ The API exposes `PATCH /jobs/{id}/checklist` to update individual items.
 
 ---
 
+## Development Standards
+
+### Quality Gate — `make check`
+
+**Every task is complete only when `make check` passes without errors.**
+
+`make check` runs, in order:
+1. `ruff format --check` — Python formatting (no-diff check)
+2. `ruff check` — Python linting
+3. `mypy app/` — Python type checking
+4. `pytest` — Backend tests with 90%+ coverage enforced
+5. `eslint` — Frontend linting (0 errors; warnings OK)
+6. `tsc --noEmit` — Frontend type checking
+7. `vitest --coverage` — Frontend tests with coverage thresholds
+
+Do not bypass these checks. If a check fails:
+- Fix the root cause; don't add `# noqa` or `// eslint-disable` unless the rule is a known false positive.
+- For mypy: SQLModel/SQLAlchemy column expressions are excluded from strict checking via per-module overrides — do not disable checking for app logic.
+
+### Writing Tests
+
+**Backend (pytest):**
+- Write tests before implementing new features (TDD when practical).
+- Coverage threshold: 90% lines/statements; `pytest-cov` enforces this.
+- Use `tests/conftest.py` fixtures (`client`, `session`, `engine`) for all API tests.
+- Mock `asyncio.create_task` via the `client` fixture — background jobs don't run in tests.
+- To test catalog engine behavior, use `test_catalog.py` pattern: call `run_catalog` directly with a real `SubprocessRunner`.
+- Do not commit test data files; use `tmp_path`/`source_dir` fixtures.
+
+**Frontend (Vitest + React Testing Library):**
+- Coverage thresholds: lines 88%, statements 88%, branches 84%, functions 70%.
+- Function threshold is lower than lines/statements because React inline callbacks are hard to isolate.
+- Mock all API calls with `vi.mock('../lib/api', () => ({ ... }))`.
+- Use `renderWithProviders` from `src/test/helpers.tsx` for components that need Router + QueryClient.
+- Mock `EventSource` in `JobLog` tests — jsdom does not support SSE.
+- Add `ResizeObserver` stub for components using TanStack Virtual.
+
+### Backend Tooling Config
+
+| Tool | Config location | Notes |
+|---|---|---|
+| ruff | `backend/pyproject.toml` `[tool.ruff]` | Line length 100, selects E/F/W/I/UP/B/C4/SIM |
+| mypy | `backend/pyproject.toml` `[tool.mypy]` | Not strict; SQLAlchemy errors suppressed per-module |
+| pytest | `backend/pyproject.toml` `[tool.pytest.ini_options]` | asyncio_mode=auto, cov-fail-under=90 |
+
+### Frontend Tooling Config
+
+| Tool | Config location | Notes |
+|---|---|---|
+| eslint | `frontend/eslint.config.js` | react-hooks recommended, react-refresh |
+| tsc | `frontend/tsconfig.app.json` | App-only; excludes vite/vitest configs |
+| vitest | `frontend/vitest.config.ts` | jsdom, globals, v8 coverage |
+
+---
+
 ## Makefile Targets
 
 ```makefile
@@ -235,6 +290,7 @@ install-deps:  # check + print install commands for missing system deps
 docker-up:     docker-compose up --build
 test:          cd backend && pytest
 lint:          ruff check backend/ && eslint frontend/src/
+check:         all quality gates (format + lint + typecheck + test + coverage)
 ```
 
 ---

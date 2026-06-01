@@ -7,8 +7,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from app.api.dependencies import router as dependencies_router
+from app.api.devices import router as devices_router
+from app.api.duplicate_groups import router as duplicate_groups_router
+from app.api.file_entries import router as file_entries_router
+from app.api.jobs import router as jobs_router
 from app.core.config import settings
-from app.core.database import engine, get_session
+from app.core.database import get_session
 from app.core.runner import SubprocessRunner
 
 
@@ -32,6 +37,7 @@ async def lifespan(app: FastAPI):
 
     # Check external tool dependencies
     from app.core.deps import check_dependencies
+
     with get_session() as session:
         check_dependencies(session)
 
@@ -57,13 +63,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# API routers
-from app.api.devices import router as devices_router
-from app.api.jobs import router as jobs_router
-from app.api.dependencies import router as dependencies_router
-from app.api.file_entries import router as file_entries_router
-from app.api.duplicate_groups import router as duplicate_groups_router
-
 app.include_router(devices_router, prefix="/api")
 app.include_router(jobs_router, prefix="/api")
 app.include_router(dependencies_router, prefix="/api")
@@ -78,6 +77,7 @@ if static_dir.exists():
 
 def main():
     import uvicorn
+
     uvicorn.run(
         "app.main:app",
         host=settings.host,

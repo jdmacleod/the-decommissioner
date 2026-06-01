@@ -4,8 +4,8 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import Depends
-from sqlmodel import Session
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlmodel import Session
 
 from app.core.database import get_session
 from app.models.dependency import Dependency
@@ -49,7 +49,7 @@ REQUIRED = [
 def check_dependencies(session: Session) -> list[Dependency]:
     results = []
     for dep in REQUIRED:
-        binary = dep["name"]
+        binary: str = str(dep["name"])
         found = shutil.which(binary) is not None
         version = None
         status = DependencyStatus.missing
@@ -58,7 +58,9 @@ def check_dependencies(session: Session) -> list[Dependency]:
             try:
                 out = subprocess.run(
                     dep["version_cmd"],
-                    capture_output=True, text=True, timeout=5,
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
                 )
                 version = (out.stdout or out.stderr).strip().split("\n")[0]
                 status = DependencyStatus.found
@@ -69,7 +71,7 @@ def check_dependencies(session: Session) -> list[Dependency]:
             sqlite_insert(Dependency)
             .values(
                 name=binary,
-                required_for=str([jt.value for jt in dep["required_for"]]),
+                required_for=str([jt.value for jt in dep["required_for"]]),  # type: ignore[attr-defined]
                 status=status,
                 version=version,
                 install_hint=dep["install_hint"],
@@ -88,7 +90,7 @@ def check_dependencies(session: Session) -> list[Dependency]:
         results.append(
             Dependency(
                 name=binary,
-                required_for=str([jt.value for jt in dep["required_for"]]),
+                required_for=str([jt.value for jt in dep["required_for"]]),  # type: ignore[attr-defined]
                 status=status,
                 version=version,
                 install_hint=dep["install_hint"],
@@ -100,6 +102,7 @@ def check_dependencies(session: Session) -> list[Dependency]:
 
 
 # FastAPI dependency helpers
+
 
 def get_db_session():
     with get_session() as session:

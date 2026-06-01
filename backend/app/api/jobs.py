@@ -1,15 +1,13 @@
 import asyncio
 from pathlib import Path
 
+import aiofiles
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
-from sqlmodel import select
-
-import aiofiles
 
 from app.core.deps import SessionDep, get_runner
-from app.models.job import Job, JobRead
 from app.models.enums import JobStatus
+from app.models.job import Job, JobRead
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -74,7 +72,7 @@ async def _tail_log(log_path: Path, job_id: int, session):
     if not log_path.exists():
         return
 
-    async with aiofiles.open(log_path, "r") as f:
+    async with aiofiles.open(log_path) as f:
         while True:
             line = await f.readline()
             if line:

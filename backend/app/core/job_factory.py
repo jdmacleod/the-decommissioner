@@ -3,8 +3,8 @@ from datetime import datetime
 from sqlmodel import Session
 
 from app.core.config import settings
-from app.models.job import Job
 from app.models.enums import JobStatus, JobType
+from app.models.job import Job
 
 
 def create_job(session: Session, device_id: int, job_type: JobType) -> Job:

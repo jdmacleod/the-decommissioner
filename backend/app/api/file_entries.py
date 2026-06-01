@@ -1,8 +1,6 @@
-from typing import Optional
-
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Query
 from pydantic import BaseModel
-from sqlmodel import select, func
+from sqlmodel import func, select
 
 from app.core.deps import SessionDep
 from app.models.enums import FileStatus
@@ -18,9 +16,9 @@ class FileEntryRead(BaseModel):
     relative_path: str
     size_bytes: int
     sha256: str
-    mime_type: Optional[str]
+    mime_type: str | None
     status: FileStatus
-    duplicate_group_id: Optional[int]
+    duplicate_group_id: int | None
 
     model_config = {"from_attributes": True}
 
@@ -42,8 +40,8 @@ def list_file_entries(
     device_id: int = Query(...),
     page: int = Query(0, ge=0),
     limit: int = Query(200, ge=1, le=1000),
-    status: Optional[FileStatus] = Query(None),
-    search: Optional[str] = Query(None),
+    status: FileStatus | None = Query(None),
+    search: str | None = Query(None),
 ):
     stmt = select(FileEntry).where(FileEntry.device_id == device_id)
 
@@ -52,13 +50,9 @@ def list_file_entries(
     if search:
         stmt = stmt.where(FileEntry.path.contains(search))
 
-    total = session.exec(
-        select(func.count()).select_from(stmt.subquery())
-    ).one()
+    total = session.exec(select(func.count()).select_from(stmt.subquery())).one()
 
-    items = session.exec(
-        stmt.offset(page * limit).limit(limit)
-    ).all()
+    items = session.exec(stmt.offset(page * limit).limit(limit)).all()
 
     return FileEntryPage(items=items, total=total, page=page, limit=limit)
 

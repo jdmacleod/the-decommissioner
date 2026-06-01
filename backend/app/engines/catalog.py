@@ -52,18 +52,20 @@ async def run_catalog(
                     stat = os.stat(full_path)
                 except OSError:
                     continue
-                entries.append({
-                    "device_id": device.id,
-                    "path": full_path,
-                    "relative_path": os.path.relpath(full_path, source_path),
-                    "size_bytes": stat.st_size,
-                    "sha256": "",
-                    "mime_type": None,
-                    "mtime": datetime.fromtimestamp(stat.st_mtime),
-                    "status": FileStatus.pending,
-                    "duplicate_group_id": None,
-                    "restic_snapshot_id": None,
-                })
+                entries.append(
+                    {
+                        "device_id": device.id,
+                        "path": full_path,
+                        "relative_path": os.path.relpath(full_path, source_path),
+                        "size_bytes": stat.st_size,
+                        "sha256": "",
+                        "mime_type": None,
+                        "mtime": datetime.fromtimestamp(stat.st_mtime),
+                        "status": FileStatus.pending,
+                        "duplicate_group_id": None,
+                        "restic_snapshot_id": None,
+                    }
+                )
 
         log_file.write(f"[{datetime.utcnow().isoformat()}] PASS 1: found {len(entries)} files\n")
 
@@ -90,11 +92,15 @@ async def _run_czkawka_pass(
     source_path: str,
 ) -> None:
     cmd = [
-        "czkawka_cli", "dup",
-        "--directories", source_path,
+        "czkawka_cli",
+        "dup",
+        "--directories",
+        source_path,
         "--json",
-        "--hash-type", "SHA256",
-        "--minimal-file-size", "1",
+        "--hash-type",
+        "SHA256",
+        "--minimal-file-size",
+        "1",
     ]
 
     output_lines: list[str] = []
@@ -102,7 +108,13 @@ async def _run_czkawka_pass(
         output_lines.append(line)
 
     raw = "".join(output_lines)
-    json_start = raw.rfind("[")
+    # czkawka prints progress lines then the JSON array on its own line at the end.
+    # rfind("\n[") locates the last line that begins with "[" (the JSON array).
+    newline_pos = raw.rfind("\n[")
+    if newline_pos != -1:
+        json_start = newline_pos + 1
+    else:
+        json_start = raw.find("[")  # no leading text — JSON starts at the top
     if json_start == -1:
         return
 
@@ -165,9 +177,7 @@ async def _python_hash_pass(
                 sha = _sha256_file(row.path)
             except OSError:
                 sha = ""
-            session.execute(
-                update(FileEntry).where(FileEntry.id == row.id).values(sha256=sha)
-            )
+            session.execute(update(FileEntry).where(FileEntry.id == row.id).values(sha256=sha))
             if i % 1000 == 0 and i > 0:
                 session.commit()
                 log_file.write(f"[{datetime.utcnow().isoformat()}] hashed {i}/{len(rows)} files\n")

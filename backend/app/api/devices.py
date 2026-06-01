@@ -1,8 +1,8 @@
 import asyncio
 from datetime import datetime
-from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel
 from sqlmodel import select
 
 from app.core.deps import SessionDep, get_runner
@@ -12,11 +12,11 @@ from app.models.enums import DeviceStage, JobType
 
 # Valid stage transitions triggered by starting a job
 JOB_START_TRANSITIONS: dict[JobType, tuple[DeviceStage, DeviceStage]] = {
-    JobType.catalog:     (DeviceStage.registered,  DeviceStage.cataloging),
-    JobType.ios_extract: (DeviceStage.registered,  DeviceStage.cataloging),
-    JobType.migrate:     (DeviceStage.analyzed,     DeviceStage.migrating),
-    JobType.verify:      (DeviceStage.migrated,     DeviceStage.verifying),
-    JobType.wipe:        (DeviceStage.verified,     DeviceStage.wiping),
+    JobType.catalog: (DeviceStage.registered, DeviceStage.cataloging),
+    JobType.ios_extract: (DeviceStage.registered, DeviceStage.cataloging),
+    JobType.migrate: (DeviceStage.analyzed, DeviceStage.migrating),
+    JobType.verify: (DeviceStage.migrated, DeviceStage.verifying),
+    JobType.wipe: (DeviceStage.verified, DeviceStage.wiping),
 }
 
 # Re-catalog is allowed from cataloged stage too
@@ -70,20 +70,14 @@ def delete_device(device_id: int, session: SessionDep):
     session.commit()
 
 
-class JobTriggerBody:
-    def __init__(self, job_type: JobType):
-        self.job_type = job_type
-
-
-from pydantic import BaseModel
-
-
 class JobTriggerRequest(BaseModel):
     job_type: JobType
 
 
 @router.post("/{device_id}/jobs", status_code=202)
-async def trigger_job(device_id: int, body: JobTriggerRequest, request: Request, session: SessionDep):
+async def trigger_job(
+    device_id: int, body: JobTriggerRequest, request: Request, session: SessionDep
+):
     device = session.get(Device, device_id)
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
@@ -97,7 +91,7 @@ async def trigger_job(device_id: int, body: JobTriggerRequest, request: Request,
             raise HTTPException(
                 status_code=409,
                 detail=f"Cannot start catalog from stage '{device.stage}' — "
-                       f"device must be in {[s.value for s in RECATALOG_STAGES]}",
+                f"device must be in {[s.value for s in RECATALOG_STAGES]}",
             )
         device.stage = DeviceStage.cataloging
     elif job_type in JOB_START_TRANSITIONS:
@@ -106,7 +100,7 @@ async def trigger_job(device_id: int, body: JobTriggerRequest, request: Request,
             raise HTTPException(
                 status_code=409,
                 detail=f"Cannot start {job_type.value} from stage '{device.stage}' — "
-                       f"device must be in '{required_stage.value}'",
+                f"device must be in '{required_stage.value}'",
             )
         device.stage = next_stage
     else:
@@ -122,14 +116,16 @@ async def trigger_job(device_id: int, body: JobTriggerRequest, request: Request,
     # Spawn background task — import engines lazily to avoid circular deps
     async def _run():
         from app.core.database import get_session as _get_session
-        from app.models.job import Job as _Job
         from app.models.enums import JobStatus as _JS
+        from app.models.job import Job as _Job
+
         try:
             if job_type == JobType.catalog:
                 from app.engines.catalog import run_catalog
+
                 with _get_session() as bg_session:
                     bg_device = bg_session.get(Device, device_id)
-                    await run_catalog(job.id, bg_device, bg_session, runner)
+                    await run_catalog(job.id or 0, bg_device, bg_session, runner)
                     # Only advance stage if job succeeded
                     with _get_session() as check_session:
                         finished_job = check_session.get(_Job, job.id)

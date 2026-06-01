@@ -17,9 +17,81 @@ dependencies = [
     "python-multipart>=0.0.9",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0",
+    "pytest-cov>=7.0",
+    "pytest-asyncio>=1.4",
+    "httpx>=0.27",
+    "mypy>=2.0",
+    "ruff>=0.4",
+]
+
 [project.scripts]
 decommissioner = "app.main:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["app*"]
+
+# ── ruff ──────────────────────────────────────────────────────────────────────
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
+ignore = [
+    "E501",   # line too long — ruff format handles this
+    "B008",   # FastAPI Depends() calls in function defaults
+    "SIM108", # ternary vs if/else — preference
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# ── mypy ──────────────────────────────────────────────────────────────────────
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true   # no stubs for sqlalchemy/sqlmodel/aiofiles
+warn_return_any = false
+warn_unused_ignores = false     # # type: ignore comments may be defensive
+disallow_any_generics = false   # SQLModel generics need this
+check_untyped_defs = true       # type-check function bodies even without annotations
+warn_redundant_casts = true
+
+[[tool.mypy.overrides]]
+module = ["alembic.*", "sqlmodel.*", "sqlalchemy.*", "aiofiles.*"]
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+# SQLModel column descriptors produce false positives for attr-defined,
+# union-attr, arg-type, and misc — these are not real bugs.
+module = [
+    "app.api.duplicate_groups",
+    "app.api.file_entries",
+    "app.engines.catalog",
+]
+disable_error_code = ["union-attr", "arg-type", "attr-defined", "misc"]
+
+# ── pytest ────────────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = [
+    "--cov=app",
+    "--cov-report=term-missing",
+    "--cov-fail-under=90",
+]
+
+[tool.coverage.run]
+omit = ["tests/*", "alembic/*", "app/main.py"]  # main.py is wired infra
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@abstractmethod",
+]

@@ -1,9 +1,9 @@
-from typing import TYPE_CHECKING, Optional
 from datetime import datetime
+from typing import TYPE_CHECKING, Optional
 
-from sqlmodel import SQLModel, Field, Relationship
+from sqlmodel import Field, Relationship, SQLModel
 
-from app.models.enums import JobType, JobStatus
+from app.models.enums import JobStatus, JobType
 
 if TYPE_CHECKING:
     from app.models.device import Device
@@ -11,16 +11,16 @@ if TYPE_CHECKING:
 
 
 class Job(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     device_id: int = Field(foreign_key="device.id")
     job_type: JobType
     status: JobStatus = JobStatus.pending
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
-    exit_code: Optional[int] = None
-    error_message: Optional[str] = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    exit_code: int | None = None
+    error_message: str | None = None
     log_path: str
-    job_metadata: Optional[str] = None
+    job_metadata: str | None = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     device: Optional["Device"] = Relationship(back_populates="jobs")
@@ -32,10 +32,10 @@ class JobRead(SQLModel):
     device_id: int
     job_type: JobType
     status: JobStatus
-    started_at: Optional[datetime]
-    completed_at: Optional[datetime]
-    exit_code: Optional[int]
-    error_message: Optional[str]
+    started_at: datetime | None
+    completed_at: datetime | None
+    exit_code: int | None
+    error_message: str | None
     log_path: str
-    job_metadata: Optional[str]
+    job_metadata: str | None
     created_at: datetime

@@ -1,7 +1,7 @@
-from pathlib import Path
 from contextlib import contextmanager
+from pathlib import Path
 
-from sqlmodel import create_engine, Session, SQLModel
+from sqlmodel import Session, SQLModel, create_engine
 
 from app.core.config import settings
 

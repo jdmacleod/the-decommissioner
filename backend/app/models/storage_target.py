@@ -1,7 +1,6 @@
-from typing import Optional
 from datetime import datetime
 
-from sqlmodel import SQLModel, Field
+from sqlmodel import Field, SQLModel
 
 from app.models.enums import StorageBackend
 
@@ -9,7 +8,7 @@ from app.models.enums import StorageBackend
 class StorageTarget(SQLModel, table=True):
     __tablename__ = "storagetarget"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     name: str
     backend: StorageBackend
     path: str

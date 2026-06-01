@@ -1,14 +1,12 @@
 import asyncio
 import os
+from collections.abc import AsyncIterator
 from datetime import datetime
 from pathlib import Path
-from typing import AsyncIterator, Optional
-
-from sqlmodel import Session
 
 from app.core.config import settings
-from app.models.job import Job
 from app.models.enums import JobStatus
+from app.models.job import Job
 
 
 class SubprocessRunner:
@@ -30,8 +28,8 @@ class SubprocessRunner:
         self,
         job_id: int,
         cmd: list[str],
-        env: Optional[dict[str, str]] = None,
-        cwd: Optional[str] = None,
+        env: dict[str, str] | None = None,
+        cwd: str | None = None,
     ) -> AsyncIterator[str]:
         log_path = self.log_path_for(job_id)
         merged_env = {**os.environ, **(env or {})}
@@ -54,6 +52,7 @@ class SubprocessRunner:
                 log_file.write(header)
                 yield header
 
+                assert proc.stdout is not None
                 async for raw_line in proc.stdout:
                     line = raw_line.decode("utf-8", errors="replace")
                     log_file.write(line)
@@ -105,7 +104,7 @@ class SubprocessRunner:
         if not log_path.exists():
             yield f"[no log found for job {job_id}]\n"
             return
-        with open(log_path, "r") as f:
+        with open(log_path) as f:
             for line in f:
                 yield line
 
@@ -118,8 +117,8 @@ class SubprocessRunner:
         self,
         job_id: int,
         status: JobStatus,
-        exit_code: Optional[int] = None,
-        error_message: Optional[str] = None,
+        exit_code: int | None = None,
+        error_message: str | None = None,
     ) -> None:
         with self._session_factory() as session:
             job = session.get(Job, job_id)

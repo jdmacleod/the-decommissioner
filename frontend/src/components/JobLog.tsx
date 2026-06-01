@@ -8,13 +8,16 @@ interface JobLogProps {
 export function JobLog({ jobId, className = '' }: JobLogProps) {
   const [lines, setLines] = useState<string[]>([])
   const [done, setDone] = useState(false)
+  const [showScrollBtn, setShowScrollBtn] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const autoScrollRef = useRef(true)
 
   useEffect(() => {
-    setLines([])
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLines([])        // Reset state when jobId changes — intentional
     setDone(false)
+    setShowScrollBtn(false)
     autoScrollRef.current = true
 
     const es = new EventSource(`/api/jobs/${jobId}/stream`)
@@ -47,6 +50,7 @@ export function JobLog({ jobId, className = '' }: JobLogProps) {
     if (!el) return
     const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40
     autoScrollRef.current = atBottom
+    setShowScrollBtn(!atBottom)
   }
 
   return (
@@ -62,10 +66,11 @@ export function JobLog({ jobId, className = '' }: JobLogProps) {
         {done && <div className="text-gray-500 mt-2">— Job complete —</div>}
         <div ref={bottomRef} />
       </div>
-      {!autoScrollRef.current && (
+      {showScrollBtn && (
         <button
           onClick={() => {
             autoScrollRef.current = true
+            setShowScrollBtn(false)
             bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
           }}
           className="absolute bottom-3 right-3 text-xs bg-gray-700 text-white px-2 py-1 rounded"

@@ -1,8 +1,8 @@
-from typing import TYPE_CHECKING, Optional
 from datetime import datetime
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import Index
-from sqlmodel import SQLModel, Field, Relationship
+from sqlmodel import Field, Relationship, SQLModel
 
 from app.models.enums import FileStatus
 
@@ -18,17 +18,17 @@ class FileEntry(SQLModel, table=True):
         Index("ix_fileentry_device_status", "device_id", "status"),
     )
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     device_id: int = Field(foreign_key="device.id")
     path: str
     relative_path: str
     size_bytes: int
     sha256: str = Field(default="", max_length=64)
-    mime_type: Optional[str] = None
+    mime_type: str | None = None
     mtime: datetime
     status: FileStatus = FileStatus.pending
-    duplicate_group_id: Optional[int] = Field(default=None, foreign_key="duplicategroup.id")
-    restic_snapshot_id: Optional[str] = None
+    duplicate_group_id: int | None = Field(default=None, foreign_key="duplicategroup.id")
+    restic_snapshot_id: str | None = None
 
     device: Optional["Device"] = Relationship(back_populates="file_entries")
     duplicate_group: Optional["DuplicateGroup"] = Relationship(

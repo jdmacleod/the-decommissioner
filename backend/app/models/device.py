@@ -1,34 +1,34 @@
-from typing import TYPE_CHECKING, List, Optional
 from datetime import datetime
+from typing import TYPE_CHECKING
 
-from sqlmodel import SQLModel, Field, Relationship
+from sqlmodel import Field, Relationship, SQLModel
 
-from app.models.enums import DeviceType, DeviceStage
+from app.models.enums import DeviceStage, DeviceType
 
 if TYPE_CHECKING:
-    from app.models.job import Job
     from app.models.file_entry import FileEntry
+    from app.models.job import Job
     from app.models.snapshot import Snapshot
 
 
 class DeviceBase(SQLModel):
     name: str
     device_type: DeviceType
-    source_path: Optional[str] = None
-    serial_number: Optional[str] = None
-    notes: Optional[str] = None
+    source_path: str | None = None
+    serial_number: str | None = None
+    notes: str | None = None
 
 
 class Device(DeviceBase, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     stage: DeviceStage = DeviceStage.registered
-    staging_path: Optional[str] = None
+    staging_path: str | None = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
-    jobs: List["Job"] = Relationship(back_populates="device")
-    file_entries: List["FileEntry"] = Relationship(back_populates="device")
-    snapshots: List["Snapshot"] = Relationship(back_populates="device")
+    jobs: list["Job"] = Relationship(back_populates="device")
+    file_entries: list["FileEntry"] = Relationship(back_populates="device")
+    snapshots: list["Snapshot"] = Relationship(back_populates="device")
 
 
 class DeviceCreate(DeviceBase):
@@ -43,10 +43,10 @@ class DeviceRead(DeviceBase):
 
 
 class DeviceUpdate(SQLModel):
-    name: Optional[str] = None
-    device_type: Optional[DeviceType] = None
-    source_path: Optional[str] = None
-    serial_number: Optional[str] = None
-    notes: Optional[str] = None
-    stage: Optional[DeviceStage] = None
-    staging_path: Optional[str] = None
+    name: str | None = None
+    device_type: DeviceType | None = None
+    source_path: str | None = None
+    serial_number: str | None = None
+    notes: str | None = None
+    stage: DeviceStage | None = None
+    staging_path: str | None = None

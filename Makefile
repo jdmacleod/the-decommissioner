@@ -1,4 +1,4 @@
-.PHONY: dev-backend dev-frontend build install-deps test lint docker-up
+.PHONY: dev-backend dev-frontend build install-deps test lint check docker-up
 
 BACKEND_DIR = backend
 FRONTEND_DIR = frontend
@@ -31,8 +31,27 @@ test:
 	cd $(BACKEND_DIR) && .venv/bin/pytest
 
 lint:
-	cd $(BACKEND_DIR) && .venv/bin/ruff check app/
-	cd $(FRONTEND_DIR) && npx eslint src/
+	cd $(BACKEND_DIR) && ruff check app/ tests/
+	cd $(FRONTEND_DIR) && npm run lint
+
+# ── check: all quality gates must pass before merging ────────────────────────
+check:
+	@echo "==> Backend: ruff format check"
+	cd $(BACKEND_DIR) && ruff format --check app/ tests/
+	@echo "==> Backend: ruff lint"
+	cd $(BACKEND_DIR) && ruff check app/ tests/
+	@echo "==> Backend: mypy"
+	cd $(BACKEND_DIR) && .venv/bin/mypy app/
+	@echo "==> Backend: pytest (90%+ coverage)"
+	cd $(BACKEND_DIR) && .venv/bin/pytest
+	@echo "==> Frontend: ESLint"
+	cd $(FRONTEND_DIR) && npm run lint
+	@echo "==> Frontend: TypeScript"
+	cd $(FRONTEND_DIR) && npm run typecheck
+	@echo "==> Frontend: Vitest (coverage thresholds)"
+	cd $(FRONTEND_DIR) && npm run test:coverage
+	@echo ""
+	@echo "All checks passed."
 
 docker-up:
 	docker-compose up --build

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter
 from sqlmodel import select
 
 from app.core.deps import SessionDep, check_dependencies

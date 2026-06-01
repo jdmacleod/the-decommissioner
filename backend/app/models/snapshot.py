@@ -1,7 +1,7 @@
-from typing import TYPE_CHECKING, Optional
 from datetime import datetime
+from typing import TYPE_CHECKING, Optional
 
-from sqlmodel import SQLModel, Field, Relationship
+from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
     from app.models.device import Device
@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 
 class Snapshot(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     device_id: int = Field(foreign_key="device.id")
     job_id: int = Field(foreign_key="job.id")
     storage_target_id: int = Field(foreign_key="storagetarget.id")
@@ -17,9 +17,9 @@ class Snapshot(SQLModel, table=True):
     file_count: int
     total_bytes: int
     added_bytes: int
-    tags: Optional[str] = None
+    tags: str | None = None
     taken_at: datetime
-    verified_at: Optional[datetime] = None
+    verified_at: datetime | None = None
 
     device: Optional["Device"] = Relationship(back_populates="snapshots")
     job: Optional["Job"] = Relationship(back_populates="snapshot")
