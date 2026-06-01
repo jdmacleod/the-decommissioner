@@ -1,0 +1,28 @@
+# Python
+backend/.venv/
+backend/__pycache__/
+backend/app/__pycache__/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+*.egg-info/
+dist/
+build/
+
+# Database & runtime data
+*.sqlite
+*.db
+~/.decommissioner/
+
+# Logs
+backend/logs/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Compiled frontend (served by backend)
+backend/app/static/
+
+# OS
+.DS_Store

@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "the-decommissioner"
+version = "0.1.0"
+description = "Self-hosted service for decommissioning old hardware"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.29",
+    "sqlmodel>=0.0.19",
+    "alembic>=1.13",
+    "aiofiles>=23.0",
+    "pydantic-settings>=2.0",
+    "python-multipart>=0.0.9",
+]
+
+[project.scripts]
+decommissioner = "app.main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
