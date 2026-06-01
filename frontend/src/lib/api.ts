@@ -1,4 +1,7 @@
-import type { Device, DeviceCreate, Job, Dependency } from '../types/api'
+import type {
+  Device, DeviceCreate, Job, Dependency,
+  FileEntryPage, DuplicateGroup, DupStats, FileStatus,
+} from '../types/api'
 
 const BASE = '/api'
 
@@ -19,6 +22,8 @@ export const getDevices = () => request<Device[]>('/devices')
 export const getDevice = (id: number) => request<Device>(`/devices/${id}`)
 export const createDevice = (body: DeviceCreate) =>
   request<Device>('/devices', { method: 'POST', body: JSON.stringify(body) })
+export const updateDevice = (id: number, body: Partial<Device>) =>
+  request<Device>(`/devices/${id}`, { method: 'PATCH', body: JSON.stringify(body) })
 export const deleteDevice = (id: number) =>
   fetch(`${BASE}/devices/${id}`, { method: 'DELETE' })
 
@@ -31,6 +36,51 @@ export const triggerJob = (deviceId: number, jobType: string) =>
   })
 export const cancelJob = (id: number) =>
   request<{ job_id: number; status: string }>(`/jobs/${id}/cancel`, { method: 'POST' })
+
+// File entries
+export interface FileEntryQuery {
+  device_id: number
+  page?: number
+  limit?: number
+  status?: FileStatus
+  search?: string
+}
+
+export const getFileEntries = (q: FileEntryQuery): Promise<FileEntryPage> => {
+  const params = new URLSearchParams({ device_id: String(q.device_id) })
+  if (q.page !== undefined) params.set('page', String(q.page))
+  if (q.limit !== undefined) params.set('limit', String(q.limit))
+  if (q.status) params.set('status', q.status)
+  if (q.search) params.set('search', q.search)
+  return request(`/file-entries?${params}`)
+}
+
+export const bulkUpdateFileStatus = (updates: { id: number; status: FileStatus }[]) =>
+  request<{ updated: number }>('/file-entries', {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  })
+
+// Duplicate groups
+export const getDuplicateGroups = (deviceId: number, resolved?: boolean): Promise<DuplicateGroup[]> => {
+  const params = new URLSearchParams({ device_id: String(deviceId) })
+  if (resolved !== undefined) params.set('resolved', String(resolved))
+  return request(`/duplicate-groups?${params}`)
+}
+
+export const resolveGroup = (groupId: number, canonicalEntryId: number) =>
+  request<DuplicateGroup>(`/duplicate-groups/${groupId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ canonical_entry_id: canonicalEntryId }),
+  })
+
+export const autoResolveGroups = (deviceId: number) =>
+  request<{ resolved: number; remaining: number }>(`/duplicate-groups/${deviceId}/auto-resolve`, {
+    method: 'POST',
+  })
+
+export const getDupStats = (deviceId: number): Promise<DupStats> =>
+  request(`/duplicate-groups/stats/${deviceId}`)
 
 // Dependencies
 export const getDependencies = () => request<Dependency[]>('/dependencies')

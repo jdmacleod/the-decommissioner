@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getDevice, triggerJob } from '../lib/api'
+import { getDevice, triggerJob, getDupStats } from '../lib/api'
 import { StageProgress } from '../components/StageProgress'
 import { JobLog } from '../components/JobLog'
 import type { DeviceStage } from '../types/api'
@@ -20,6 +20,12 @@ export function DeviceWizard() {
     refetchInterval: 3000,
   })
 
+  const { data: dupStats } = useQuery({
+    queryKey: ['dup-stats', deviceId],
+    queryFn: () => getDupStats(deviceId),
+    enabled: !!device && ['cataloged', 'analyzing', 'analyzed'].includes(device.stage),
+  })
+
   const catalogMutation = useMutation({
     mutationFn: () => triggerJob(deviceId, 'catalog'),
     onSuccess: (res) => {
@@ -34,6 +40,8 @@ export function DeviceWizard() {
 
   const canCatalog = CATALOG_STAGES.includes(device.stage)
   const isCataloging = device.stage === 'cataloging'
+  const postCatalog = ['cataloged', 'analyzing', 'analyzed'].includes(device.stage)
+  const isAnalyzed = device.stage === 'analyzed'
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
@@ -53,25 +61,51 @@ export function DeviceWizard() {
 
       {/* Catalog Stage */}
       <div className="bg-white border border-gray-200 rounded-lg p-5">
-        <h3 className="font-semibold text-gray-800 mb-3">Catalog Files</h3>
-
-        {device.stage === 'cataloged' && !activeJobId && (
-          <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2 mb-4">
-            Catalog complete. Files are ready for review.
-          </div>
-        )}
+        <h3 className="font-semibold text-gray-800 mb-3">Step 1 — Catalog Files</h3>
 
         {isCataloging || activeJobId ? (
           activeJobId ? (
             <div>
-              <div className="text-sm text-blue-600 mb-3">Catalog job running...</div>
+              <div className="text-sm text-blue-600 mb-3">Cataloging…</div>
               <JobLog jobId={activeJobId} />
             </div>
           ) : (
-            <div className="text-sm text-gray-500">Starting catalog job...</div>
+            <div className="text-sm text-gray-500">Starting catalog job…</div>
           )
+        ) : postCatalog && !activeJobId ? (
+          <div>
+            <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2 mb-4">
+              <span>✓ Catalog complete</span>
+              {dupStats && dupStats.total > 0 && (
+                <span className="text-green-600">
+                  · {dupStats.total} duplicate group{dupStats.total !== 1 ? 's' : ''} found
+                </span>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Link
+                to={`/devices/${deviceId}/files`}
+                className="text-sm border border-gray-300 px-3 py-2 rounded hover:bg-gray-50"
+              >
+                Review Files
+              </Link>
+              <Link
+                to={`/devices/${deviceId}/duplicates`}
+                className="text-sm bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700"
+              >
+                {device.stage === 'analyzed' ? 'View Duplicates' : 'Resolve Duplicates →'}
+              </Link>
+              <button
+                onClick={() => catalogMutation.mutate()}
+                disabled={catalogMutation.isPending}
+                className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2 ml-auto"
+              >
+                Re-catalog
+              </button>
+            </div>
+          </div>
         ) : (
-          <div className="flex items-center gap-4">
+          <div>
             {device.source_path ? (
               <div>
                 <div className="text-sm text-gray-600 mb-3">
@@ -82,22 +116,34 @@ export function DeviceWizard() {
                   disabled={!canCatalog || catalogMutation.isPending}
                   className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 disabled:opacity-50"
                 >
-                  {catalogMutation.isPending ? 'Starting...' : device.stage === 'cataloged' ? 'Re-catalog' : 'Start Catalog'}
+                  {catalogMutation.isPending ? 'Starting…' : 'Start Catalog'}
                 </button>
               </div>
             ) : (
               <div className="text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 rounded px-3 py-2">
-                No source path set. Edit the device to add a source path before cataloging.
+                No source path set. Edit the device to add one before cataloging.
               </div>
             )}
           </div>
         )}
       </div>
 
-      {/* Placeholder cards for future stages */}
-      {['Migrate', 'Verify', 'Wipe', 'Recycle'].map((stage) => (
-        <div key={stage} className="bg-gray-50 border border-gray-100 rounded-lg p-5 mt-4 opacity-50">
-          <h3 className="font-semibold text-gray-400">{stage}</h3>
+      {/* Migrate (placeholder) */}
+      <div className={`border rounded-lg p-5 mt-4 ${isAnalyzed ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100 opacity-50'}`}>
+        <h3 className={`font-semibold ${isAnalyzed ? 'text-gray-800' : 'text-gray-400'}`}>
+          Step 2 — Migrate to Storage
+        </h3>
+        {isAnalyzed ? (
+          <div className="text-sm text-gray-500 mt-1">Ready — configure a storage target in Settings, then start migration.</div>
+        ) : (
+          <div className="text-xs text-gray-400 mt-1">Available after duplicates are resolved</div>
+        )}
+      </div>
+
+      {/* Verify / Wipe / Recycle placeholders */}
+      {['Step 3 — Verify', 'Step 4 — Wipe', 'Step 5 — Recycle'].map((label) => (
+        <div key={label} className="bg-gray-50 border border-gray-100 rounded-lg p-5 mt-4 opacity-40">
+          <h3 className="font-semibold text-gray-400">{label}</h3>
           <div className="text-xs text-gray-400 mt-1">Available after previous stage completes</div>
         </div>
       ))}

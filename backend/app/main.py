@@ -61,10 +61,14 @@ app.add_middleware(
 from app.api.devices import router as devices_router
 from app.api.jobs import router as jobs_router
 from app.api.dependencies import router as dependencies_router
+from app.api.file_entries import router as file_entries_router
+from app.api.duplicate_groups import router as duplicate_groups_router
 
 app.include_router(devices_router, prefix="/api")
 app.include_router(jobs_router, prefix="/api")
 app.include_router(dependencies_router, prefix="/api")
+app.include_router(file_entries_router, prefix="/api")
+app.include_router(duplicate_groups_router, prefix="/api")
 
 # Serve compiled frontend from backend/app/static if it exists
 static_dir = Path(__file__).parent / "static"
