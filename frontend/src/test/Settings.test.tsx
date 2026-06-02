@@ -13,12 +13,13 @@ vi.mock('../lib/api', () => ({
   deleteStorageTarget: vi.fn(),
   testStorageTarget: vi.fn(),
   initStorageTarget: vi.fn(),
+  updateStorageTarget: vi.fn(),
 }))
 
 import {
   getDependencies, recheckDependencies,
   getStorageTargets, createStorageTarget, deleteStorageTarget,
-  testStorageTarget, initStorageTarget,
+  testStorageTarget, initStorageTarget, updateStorageTarget,
 } from '../lib/api'
 
 const mockDeps = [
@@ -41,6 +42,7 @@ beforeEach(() => {
   vi.mocked(deleteStorageTarget).mockResolvedValue(new Response(null, { status: 204 }))
   vi.mocked(testStorageTarget).mockResolvedValue({ ok: true, output: '' })
   vi.mocked(initStorageTarget).mockResolvedValue({ ok: true, output: 'initialized' })
+  vi.mocked(updateStorageTarget).mockResolvedValue(makeTarget())
 })
 
 describe('Settings page', () => {

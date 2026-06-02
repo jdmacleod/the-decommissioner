@@ -5,16 +5,15 @@ import {
   getStorageTargets, createStorageTarget, deleteStorageTarget,
   testStorageTarget, initStorageTarget, updateStorageTarget,
 } from '../lib/api'
-import type { StorageBackend, StorageTarget } from '../types/api'
+import { StorageTargetCard } from '../components/StorageTargetCard'
+import { StorageTargetForm } from '../components/StorageTargetForm'
+import type { StorageTargetFormValues } from '../components/StorageTargetForm'
 
 export function Settings() {
   const queryClient = useQueryClient()
 
   // ── Dependencies ──────────────────────────────────────────────────────────
-  const { data: deps = [] } = useQuery({
-    queryKey: ['dependencies'],
-    queryFn: getDependencies,
-  })
+  const { data: deps = [] } = useQuery({ queryKey: ['dependencies'], queryFn: getDependencies })
 
   const recheck = useMutation({
     mutationFn: recheckDependencies,
@@ -28,27 +27,14 @@ export function Settings() {
   })
 
   const [showAddForm, setShowAddForm] = useState(false)
-  const [newName, setNewName] = useState('')
-  const [newBackend, setNewBackend] = useState<StorageBackend>('local')
-  const [newPath, setNewPath] = useState('')
-  const [newPwdEnv, setNewPwdEnv] = useState('RESTIC_PASSWORD')
-  const [newDefault, setNewDefault] = useState(false)
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [testResults, setTestResults] = useState<Record<number, { ok: boolean; output: string }>>({})
 
   const addTarget = useMutation({
-    mutationFn: () =>
-      createStorageTarget({
-        name: newName,
-        backend: newBackend,
-        path: newPath,
-        restic_password_env: newPwdEnv,
-        is_default: newDefault,
-      }),
+    mutationFn: (values: StorageTargetFormValues) => createStorageTarget(values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['storage-targets'] })
       setShowAddForm(false)
-      setNewName('')
-      setNewPath('')
-      setNewDefault(false)
     },
   })
 
@@ -57,7 +43,6 @@ export function Settings() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['storage-targets'] }),
   })
 
-  const [testResults, setTestResults] = useState<Record<number, { ok: boolean; output: string }>>({})
   const testTarget = useMutation({
     mutationFn: (id: number) => testStorageTarget(id),
     onSuccess: (data, id) => setTestResults((prev) => ({ ...prev, [id]: data })),
@@ -68,32 +53,12 @@ export function Settings() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['storage-targets'] }),
   })
 
-  // ── Edit existing target ──────────────────────────────────────────────────
-  const [editingTarget, setEditingTarget] = useState<StorageTarget | null>(null)
-  const [editName, setEditName] = useState('')
-  const [editPath, setEditPath] = useState('')
-  const [editPwdEnv, setEditPwdEnv] = useState('')
-  const [editDefault, setEditDefault] = useState(false)
-
-  function startEdit(t: StorageTarget) {
-    setEditingTarget(t)
-    setEditName(t.name)
-    setEditPath(t.path)
-    setEditPwdEnv(t.restic_password_env)
-    setEditDefault(t.is_default)
-  }
-
   const saveEdit = useMutation({
-    mutationFn: () =>
-      updateStorageTarget(editingTarget!.id, {
-        name: editName,
-        path: editPath,
-        restic_password_env: editPwdEnv,
-        is_default: editDefault,
-      }),
+    mutationFn: ({ id, values }: { id: number; values: StorageTargetFormValues }) =>
+      updateStorageTarget(id, values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['storage-targets'] })
-      setEditingTarget(null)
+      setEditingId(null)
     },
   })
 
@@ -105,77 +70,25 @@ export function Settings() {
       <div className="bg-white border border-gray-200 rounded-lg p-5 mb-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-gray-800">Storage Target</h3>
-          <button
-            onClick={() => setShowAddForm((v) => !v)}
-            className="text-xs border border-gray-300 px-3 py-1.5 rounded hover:bg-gray-50"
-          >
-            {showAddForm ? 'Cancel' : '+ Add'}
-          </button>
+          {!showAddForm && (
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="text-xs border border-gray-300 px-3 py-1.5 rounded hover:bg-gray-50"
+            >
+              + Add
+            </button>
+          )}
         </div>
 
         {showAddForm && (
-          <form
-            onSubmit={(e) => { e.preventDefault(); addTarget.mutate() }}
-            className="border border-gray-100 rounded p-3 mb-4 space-y-2 text-sm"
-          >
-            <div>
-              <label className="block text-gray-600 mb-0.5">Name</label>
-              <input
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                required
-                placeholder="My Backup Repo"
-                className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
-              />
-            </div>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <label className="block text-gray-600 mb-0.5">Backend</label>
-                <select
-                  value={newBackend}
-                  onChange={(e) => setNewBackend(e.target.value as StorageBackend)}
-                  className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
-                >
-                  <option value="local">Local</option>
-                  <option value="sftp">SFTP</option>
-                  <option value="s3">S3</option>
-                </select>
-              </div>
-              <div className="flex-1">
-                <label className="block text-gray-600 mb-0.5">Password env var</label>
-                <input
-                  value={newPwdEnv}
-                  onChange={(e) => setNewPwdEnv(e.target.value)}
-                  className="w-full border border-gray-300 rounded px-2 py-1 text-sm font-mono"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-gray-600 mb-0.5">Path / URL</label>
-              <input
-                value={newPath}
-                onChange={(e) => setNewPath(e.target.value)}
-                required
-                placeholder="/Volumes/BackupDrive/repo"
-                className="w-full border border-gray-300 rounded px-2 py-1 text-sm font-mono"
-              />
-            </div>
-            <label className="flex items-center gap-2 text-gray-600">
-              <input
-                type="checkbox"
-                checked={newDefault}
-                onChange={(e) => setNewDefault(e.target.checked)}
-              />
-              Set as default
-            </label>
-            <button
-              type="submit"
-              disabled={addTarget.isPending}
-              className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 disabled:opacity-50"
-            >
-              {addTarget.isPending ? 'Adding…' : 'Add Target'}
-            </button>
-          </form>
+          <div className="border border-gray-100 rounded p-3 mb-4">
+            <StorageTargetForm
+              onSubmit={(values) => addTarget.mutate(values)}
+              onCancel={() => setShowAddForm(false)}
+              isPending={addTarget.isPending}
+              submitLabel="Add Target"
+            />
+          </div>
         )}
 
         {targets.length === 0 && !showAddForm && (
@@ -184,127 +97,21 @@ export function Settings() {
 
         <div className="space-y-3">
           {targets.map((t) => (
-            <div key={t.id} className="border border-gray-100 rounded p-3">
-              {editingTarget?.id === t.id ? (
-                <form
-                  onSubmit={(e) => { e.preventDefault(); saveEdit.mutate() }}
-                  className="space-y-2 text-sm"
-                >
-                  <input
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    required
-                    placeholder="Name"
-                    className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
-                  />
-                  <input
-                    value={editPath}
-                    onChange={(e) => setEditPath(e.target.value)}
-                    required
-                    placeholder="Path / URL"
-                    className="w-full border border-gray-300 rounded px-2 py-1 text-sm font-mono"
-                  />
-                  <input
-                    value={editPwdEnv}
-                    onChange={(e) => setEditPwdEnv(e.target.value)}
-                    placeholder="Password env var"
-                    className="w-full border border-gray-300 rounded px-2 py-1 text-sm font-mono"
-                  />
-                  <label className="flex items-center gap-2 text-gray-600">
-                    <input
-                      type="checkbox"
-                      checked={editDefault}
-                      onChange={(e) => setEditDefault(e.target.checked)}
-                    />
-                    Set as default
-                  </label>
-                  <div className="flex gap-2">
-                    <button
-                      type="submit"
-                      disabled={saveEdit.isPending}
-                      className="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 disabled:opacity-50"
-                    >
-                      {saveEdit.isPending ? 'Saving…' : 'Save'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEditingTarget(null)}
-                      className="text-xs border border-gray-300 px-3 py-1 rounded hover:bg-gray-50"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="font-medium text-sm text-gray-800">
-                        {t.name}
-                        {t.is_default && (
-                          <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
-                            default
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs font-mono text-gray-500 mt-0.5">{t.path}</div>
-                      <div className="text-xs text-gray-400 mt-0.5">
-                        {t.backend} · {t.restic_password_env} ·{' '}
-                        {t.initialized ? (
-                          <span className="text-green-600">✓ initialized</span>
-                        ) : (
-                          <span className="text-yellow-600">not initialized</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex gap-1 ml-2">
-                      <button
-                        onClick={() => startEdit(t)}
-                        className="text-xs text-gray-400 hover:text-gray-700"
-                        aria-label={`Edit ${t.name}`}
-                      >
-                        ✎
-                      </button>
-                      <button
-                        onClick={() => removeTarget.mutate(t.id)}
-                        className="text-xs text-red-400 hover:text-red-600"
-                        aria-label={`Remove ${t.name}`}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      onClick={() => testTarget.mutate(t.id)}
-                      disabled={testTarget.isPending}
-                      className="text-xs border border-gray-300 px-2 py-1 rounded hover:bg-gray-50 disabled:opacity-50"
-                    >
-                      Test
-                    </button>
-                    {!t.initialized && (
-                      <button
-                        onClick={() => initTarget.mutate(t.id)}
-                        disabled={initTarget.isPending}
-                        className="text-xs border border-gray-300 px-2 py-1 rounded hover:bg-gray-50 disabled:opacity-50"
-                      >
-                        Init
-                      </button>
-                    )}
-                  </div>
-                  {testResults[t.id] !== undefined && (
-                    <div
-                      className={`mt-2 text-xs font-mono p-2 rounded ${testResults[t.id].ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}
-                    >
-                      {testResults[t.id].ok ? '✓ Connected' : '✗ Failed'}
-                      {testResults[t.id].output && (
-                        <div className="text-gray-500 mt-1 truncate">{testResults[t.id].output}</div>
-                      )}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+            <StorageTargetCard
+              key={t.id}
+              target={t}
+              isEditing={editingId === t.id}
+              testResult={testResults[t.id]}
+              onEdit={() => setEditingId(t.id)}
+              onCancelEdit={() => setEditingId(null)}
+              onRemove={() => removeTarget.mutate(t.id)}
+              onTest={() => testTarget.mutate(t.id)}
+              onInit={() => initTarget.mutate(t.id)}
+              onSaveEdit={(values) => saveEdit.mutate({ id: t.id, values })}
+              isTestPending={testTarget.isPending}
+              isInitPending={initTarget.isPending}
+              isEditPending={saveEdit.isPending}
+            />
           ))}
         </div>
       </div>

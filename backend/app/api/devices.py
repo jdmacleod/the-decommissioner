@@ -122,181 +122,31 @@ async def trigger_job(
     runner = get_runner(request)
     target_id = body.storage_target_id
 
-    # Spawn background task — import engines lazily to avoid circular deps
+    # Spawn background task — delegates to per-job-type handler in _job_runners.py
     async def _run() -> None:
+        from app.api._job_runners import (
+            run_catalog_handler,
+            run_ios_extract_handler,
+            run_migrate_handler,
+            run_wipe_handler,
+        )
         from app.core.database import get_session as _get_session
         from app.models.enums import JobStatus as _JS
         from app.models.job import Job as _Job
 
         try:
             if job_type == JobType.catalog:
-                from app.engines.catalog import run_catalog
-
-                with _get_session() as bg_session:
-                    bg_device = bg_session.get(Device, device_id)
-                    await run_catalog(job.id or 0, bg_device, bg_session, runner)
-                with _get_session() as check_session:
-                    finished_job = check_session.get(_Job, job.id)
-                    success = finished_job and finished_job.status == _JS.completed
-                with _get_session() as upd_session:
-                    upd_device = upd_session.get(Device, device_id)
-                    if upd_device:
-                        upd_device.stage = DeviceStage.cataloged if success else prev_stage
-                        upd_device.updated_at = datetime.utcnow()
-                        upd_session.add(upd_device)
-                        upd_session.commit()
-
+                await run_catalog_handler(job.id or 0, device_id, prev_stage, runner, _get_session)
             elif job_type == JobType.ios_extract:
-                from app.engines.catalog import run_catalog as _run_catalog
-                from app.engines.ios import run_ios_extract
-
-                with _get_session() as bg_session:
-                    bg_device = bg_session.get(Device, device_id)
-                    await run_ios_extract(job.id or 0, bg_device, bg_session, runner)
-
-                with _get_session() as check_session:
-                    finished_job = check_session.get(_Job, job.id)
-                    extract_ok = finished_job and finished_job.status == _JS.completed
-
-                if extract_ok:
-                    # Auto-run catalog using the staging_path now set on the device
-                    catalog_job = None
-                    with _get_session() as cat_session:
-                        cat_device = cat_session.get(Device, device_id)
-                        catalog_job = create_job(cat_session, device_id, JobType.catalog)
-                        if cat_device:
-                            cat_device.stage = DeviceStage.cataloging
-                            cat_device.updated_at = datetime.utcnow()
-                            cat_session.add(cat_device)
-                            cat_session.commit()
-
-                    with _get_session() as cat_bg:
-                        cat_device = cat_bg.get(Device, device_id)
-                        await _run_catalog(catalog_job.id or 0, cat_device, cat_bg, runner)
-
-                    with _get_session() as check_cat:
-                        finished_cat = check_cat.get(_Job, catalog_job.id)
-                        catalog_ok = finished_cat and finished_cat.status == _JS.completed
-
-                    with _get_session() as final:
-                        final_device = final.get(Device, device_id)
-                        if final_device:
-                            final_device.stage = (
-                                DeviceStage.cataloged if catalog_ok else DeviceStage.registered
-                            )
-                            final_device.updated_at = datetime.utcnow()
-                            final.add(final_device)
-                            final.commit()
-                else:
-                    with _get_session() as err_upd:
-                        err_device = err_upd.get(Device, device_id)
-                        if err_device:
-                            err_device.stage = prev_stage
-                            err_device.updated_at = datetime.utcnow()
-                            err_upd.add(err_device)
-                            err_upd.commit()
-
+                await run_ios_extract_handler(
+                    job.id or 0, device_id, prev_stage, runner, _get_session
+                )
             elif job_type == JobType.migrate:
-                from app.engines.migrate import run_migrate
-                from app.engines.verify import run_verify
-                from app.models.storage_target import StorageTarget as _ST
-
-                resolved_target_id: int | None = None
-                with _get_session() as bg_session:
-                    st = (
-                        bg_session.get(_ST, target_id)
-                        if target_id
-                        else bg_session.exec(
-                            select(_ST).where(_ST.is_default == True)  # noqa: E712
-                        ).first()
-                    )
-                    if not st:
-                        raise RuntimeError("No storage target configured. Add one in Settings.")
-                    resolved_target_id = st.id
-                    bg_device = bg_session.get(Device, device_id)
-                    await run_migrate(job.id or 0, bg_device, st, bg_session, runner)
-
-                with _get_session() as check_session:
-                    finished_job = check_session.get(_Job, job.id)
-                    migrate_ok = finished_job and finished_job.status == _JS.completed
-
-                if migrate_ok:
-                    with _get_session() as upd:
-                        upd_device = upd.get(Device, device_id)
-                        if upd_device:
-                            upd_device.stage = DeviceStage.migrated
-                            upd_device.updated_at = datetime.utcnow()
-                            upd.add(upd_device)
-                            upd.commit()
-
-                    verify_job = None
-                    with _get_session() as vs:
-                        verify_job = create_job(vs, device_id, JobType.verify)
-                        v_device = vs.get(Device, device_id)
-                        if v_device:
-                            v_device.stage = DeviceStage.verifying
-                            v_device.updated_at = datetime.utcnow()
-                            vs.add(v_device)
-                            vs.commit()
-
-                    with _get_session() as verify_bg:
-                        v_target = verify_bg.get(_ST, resolved_target_id)
-                        v_device = verify_bg.get(Device, device_id)
-                        await run_verify(verify_job.id or 0, v_device, v_target, verify_bg, runner)  # type: ignore[arg-type]
-
-                    with _get_session() as check_v:
-                        finished_v = check_v.get(_Job, verify_job.id)
-                        verify_ok = finished_v and finished_v.status == _JS.completed
-
-                    with _get_session() as final_upd:
-                        final_device = final_upd.get(Device, device_id)
-                        if final_device:
-                            final_device.stage = (
-                                DeviceStage.verified if verify_ok else DeviceStage.migrated
-                            )
-                            final_device.updated_at = datetime.utcnow()
-                            final_upd.add(final_device)
-                            final_upd.commit()
-                else:
-                    with _get_session() as err_upd:
-                        err_device = err_upd.get(Device, device_id)
-                        if err_device:
-                            err_device.stage = prev_stage
-                            err_device.updated_at = datetime.utcnow()
-                            err_upd.add(err_device)
-                            err_upd.commit()
-
+                await run_migrate_handler(
+                    job.id or 0, device_id, prev_stage, target_id, runner, _get_session
+                )
             elif job_type == JobType.wipe:
-                from app.engines.wipe import APPLE_DEVICE_TYPES as _APPLE_TYPES
-                from app.engines.wipe import run_wipe
-
-                with _get_session() as bg_session:
-                    bg_device = bg_session.get(Device, device_id)
-                    await run_wipe(job.id or 0, bg_device, bg_session, runner)
-
-                with _get_session() as check_session:
-                    finished_job = check_session.get(_Job, job.id)
-                    wipe_ok = finished_job and finished_job.status == _JS.completed
-
-                if wipe_ok:
-                    # Apple devices: stay in wiping — user must click "Mark as Wiped"
-                    # Hardware devices: advance to wiped automatically
-                    with _get_session() as upd_session:
-                        upd_device = upd_session.get(Device, device_id)
-                        if upd_device and upd_device.device_type not in _APPLE_TYPES:
-                            upd_device.stage = DeviceStage.wiped
-                            upd_device.updated_at = datetime.utcnow()
-                            upd_session.add(upd_device)
-                            upd_session.commit()
-                else:
-                    with _get_session() as err_upd:
-                        err_device = err_upd.get(Device, device_id)
-                        if err_device:
-                            err_device.stage = prev_stage
-                            err_device.updated_at = datetime.utcnow()
-                            err_upd.add(err_device)
-                            err_upd.commit()
-
+                await run_wipe_handler(job.id or 0, device_id, prev_stage, runner, _get_session)
         except Exception as e:
             with _get_session() as err_session:
                 err_job = err_session.get(_Job, job.id)

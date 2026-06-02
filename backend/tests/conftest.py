@@ -12,6 +12,64 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 
+# ── Background-task test helper ───────────────────────────────────────────────
+
+
+@pytest.fixture(name="bg_task_runner")
+def bg_task_runner_fixture(
+    engine: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> Generator[tuple[TestClient, list[Any]], None, None]:
+    """
+    Set up the app for background-task integration testing.
+
+    Patches the database, runner, and asyncio.create_task so that the _run()
+    coroutine is captured instead of scheduled. Yields (client, captured_coros).
+
+    The caller is responsible for creating devices in the DB (using the shared
+    `engine` fixture) and for running/patching the captured coroutine.
+    """
+    import app.core.database as _db_module
+    from app.core.deps import get_db_session
+    from app.core.runner import SubprocessRunner
+    from app.main import app
+
+    @contextmanager  # type: ignore[misc]
+    def _sf() -> Generator[Session, None, None]:
+        with Session(engine) as s:
+            yield s
+
+    def _ov() -> Generator[Session, None, None]:
+        with Session(engine) as s:
+            yield s
+
+    monkeypatch.setattr(_db_module, "engine", engine)
+    monkeypatch.setattr(_db_module, "get_session", _sf)
+    app.dependency_overrides[get_db_session] = _ov
+    app.state.runner = SubprocessRunner(_sf)
+
+    captured: list[Any] = []
+
+    def _fake_task(coro: Any) -> Any:
+        captured.append(coro)
+        return MagicMock()
+
+    ok = MagicMock(spec=subprocess.CompletedProcess)
+    ok.returncode = 0
+    ok.stderr = ""
+
+    try:
+        with (
+            patch("app.main.subprocess.run", return_value=ok),
+            patch("app.core.deps.check_dependencies", MagicMock(return_value=[])),
+            patch("app.api.devices.asyncio.create_task", _fake_task),
+            TestClient(app, raise_server_exceptions=True) as c,
+        ):
+            yield c, captured
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)
+
+
 # ── Database fixtures ─────────────────────────────────────────────────────────
 
 

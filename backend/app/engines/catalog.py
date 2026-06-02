@@ -126,6 +126,22 @@ async def _run_czkawka_pass(
     _apply_czkawka_results(dup_groups, device, session)
 
 
+def _create_dup_group(
+    content_hash: str,
+    total_bytes: int,
+    entry_ids: list[int],
+    session: Session,
+    extra_values: dict | None = None,
+) -> None:
+    """Insert one DuplicateGroup and link the given FileEntry IDs to it."""
+    dup_group = DuplicateGroup(content_hash=content_hash, total_size_bytes=total_bytes)
+    session.add(dup_group)
+    session.flush()
+    for fid in entry_ids:
+        vals = {"duplicate_group_id": dup_group.id, **(extra_values or {})}
+        session.execute(update(FileEntry).where(FileEntry.id == fid).values(**vals))
+
+
 def _apply_czkawka_results(dup_groups, device: Device, session: Session) -> None:
     rows = session.exec(select(FileEntry).where(FileEntry.device_id == device.id)).all()
     path_index: dict[str, int] = {r.path: r.id for r in rows}
@@ -133,23 +149,10 @@ def _apply_czkawka_results(dup_groups, device: Device, session: Session) -> None
     for group in dup_groups:
         if not group:
             continue
-
         content_hash = group[0].get("hash", "")
         total_size = sum(f.get("size", 0) for f in group)
-
-        dup_group = DuplicateGroup(content_hash=content_hash, total_size_bytes=total_size)
-        session.add(dup_group)
-        session.flush()
-
-        for file_info in group:
-            file_id = path_index.get(file_info["path"])
-            if file_id is None:
-                continue
-            session.execute(
-                update(FileEntry)
-                .where(FileEntry.id == file_id)
-                .values(sha256=content_hash, duplicate_group_id=dup_group.id)
-            )
+        entry_ids = [fid for fi in group if (fid := path_index.get(fi["path"])) is not None]
+        _create_dup_group(content_hash, total_size, entry_ids, session, {"sha256": content_hash})
 
     session.commit()
 
@@ -205,15 +208,8 @@ def _build_duplicate_groups_from_hashes(device: Device, session: Session) -> Non
         if len(members) < 2:
             continue
         total_size = sum(m.size_bytes for m in members)
-        dup_group = DuplicateGroup(content_hash=content_hash, total_size_bytes=total_size)
-        session.add(dup_group)
-        session.flush()
-        for member in members:
-            session.execute(
-                update(FileEntry)
-                .where(FileEntry.id == member.id)
-                .values(duplicate_group_id=dup_group.id)
-            )
+        entry_ids = [m.id for m in members if m.id is not None]
+        _create_dup_group(content_hash, total_size, entry_ids, session)
 
     session.commit()
 
