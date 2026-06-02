@@ -107,11 +107,30 @@ describe('DuplicateResolver', () => {
     expect(screen.getByText(/1 remaining/i)).toBeInTheDocument()
   })
 
-  it('shows Show Resolved checkbox', async () => {
+  it('shows Show unresolved only checkbox', async () => {
     renderWithProviders(<DuplicateResolver />, { initialPath: '/devices/1/duplicates', routePath: '/devices/:id/duplicates' })
     await waitFor(() => screen.getByText('/data/file_a.txt'))
     expect(screen.getByRole('checkbox')).toBeInTheDocument()
-    expect(screen.getByText(/Show resolved/)).toBeInTheDocument()
+    expect(screen.getByText(/Show unresolved only/)).toBeInTheDocument()
+  })
+
+  it('shows Skip button for unresolved group', async () => {
+    renderWithProviders(<DuplicateResolver />, { initialPath: '/devices/1/duplicates', routePath: '/devices/:id/duplicates' })
+    await waitFor(() => screen.getByText('/data/file_a.txt'))
+    expect(screen.getByRole('button', { name: /skip/i })).toBeInTheDocument()
+  })
+
+  it('shows Keep top button for unresolved group', async () => {
+    renderWithProviders(<DuplicateResolver />, { initialPath: '/devices/1/duplicates', routePath: '/devices/:id/duplicates' })
+    await waitFor(() => screen.getByText('/data/file_a.txt'))
+    expect(screen.getByRole('button', { name: /keep top/i })).toBeInTheDocument()
+  })
+
+  it('calls resolveGroup with first entry on Keep top click', async () => {
+    renderWithProviders(<DuplicateResolver />, { initialPath: '/devices/1/duplicates', routePath: '/devices/:id/duplicates' })
+    await waitFor(() => screen.getByRole('button', { name: /keep top/i }))
+    await userEvent.click(screen.getByRole('button', { name: /keep top/i }))
+    await waitFor(() => expect(resolveGroup).toHaveBeenCalledWith(10, 1))
   })
 
   it('shows Continue to Migration button when all resolved', async () => {

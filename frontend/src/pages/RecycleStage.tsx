@@ -37,7 +37,7 @@ export function RecycleStage({ device, deviceId }: RecycleStageProps) {
   if (device.stage === 'recycled') {
     return (
       <>
-        <h3 className="font-semibold text-gray-800 mb-3">Step 4 — Recycle</h3>
+        <h3 className="font-semibold text-gray-800 mb-3">Step 6 — Recycle</h3>
         <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2 mb-4">
           <span>&#10003; {device.name} is fully decommissioned.</span>
         </div>
@@ -54,7 +54,7 @@ export function RecycleStage({ device, deviceId }: RecycleStageProps) {
 
   return (
     <>
-      <h3 className="font-semibold text-gray-800 mb-3">Step 4 — Recycle</h3>
+      <h3 className="font-semibold text-gray-800 mb-3">Step 6 — Recycle</h3>
 
       <div className="mb-4">
         <div className="text-sm font-medium text-gray-700 mb-2">Recycling options:</div>

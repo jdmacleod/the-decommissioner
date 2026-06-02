@@ -64,7 +64,7 @@ export function WipeStage({ device, deviceId }: WipeStageProps) {
   if (device.stage === 'wiped' || device.stage === 'recycled') {
     return (
       <>
-        <h3 className="font-semibold text-gray-800 mb-3">Step 3 — Wipe</h3>
+        <h3 className="font-semibold text-gray-800 mb-3">Step 5 — Wipe</h3>
         <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2">
           <span>&#10003; Wipe complete</span>
         </div>
@@ -76,7 +76,7 @@ export function WipeStage({ device, deviceId }: WipeStageProps) {
   if (device.stage === 'wiping' && isApple(device)) {
     return (
       <>
-        <h3 className="font-semibold text-gray-800 mb-3">Step 3 — Prepare for Recycling</h3>
+        <h3 className="font-semibold text-gray-800 mb-3">Step 5 — Prepare for Recycling</h3>
         <p className="text-sm text-gray-600 mb-4">
           Complete these steps on the device before handing it off.
         </p>
@@ -118,8 +118,18 @@ export function WipeStage({ device, deviceId }: WipeStageProps) {
   if (device.stage === 'wiping' && !isApple(device)) {
     return (
       <>
-        <h3 className="font-semibold text-gray-800 mb-3">Step 3 — Wiping Drive…</h3>
+        <h3 className="font-semibold text-gray-800 mb-3">Step 5 — Wiping Drive…</h3>
         <div className="text-sm text-blue-600 mb-3">Wipe in progress — do not disconnect the drive.</div>
+        {wipeMetadata.block_device && (
+          <div className="text-xs text-gray-500 font-mono mb-2">
+            Block device: {wipeMetadata.block_device}
+          </div>
+        )}
+        {wipeMetadata.method && (
+          <div className="text-xs text-gray-500 mb-3">
+            Method: {wipeMetadata.method}
+          </div>
+        )}
         {effectiveJobId && <JobLog jobId={effectiveJobId} />}
       </>
     )
@@ -130,7 +140,7 @@ export function WipeStage({ device, deviceId }: WipeStageProps) {
     const deviceLabel = device.device_type.charAt(0).toUpperCase() + device.device_type.slice(1)
     return (
       <>
-        <h3 className="font-semibold text-gray-800 mb-3">Step 3 — Prepare for Recycling</h3>
+        <h3 className="font-semibold text-gray-800 mb-3">Step 5 — Prepare for Recycling</h3>
         <p className="text-sm text-gray-600 mb-4">
           Start the guided decommission checklist for this {deviceLabel}. You'll step through each
           required action before handing it off.
@@ -149,7 +159,7 @@ export function WipeStage({ device, deviceId }: WipeStageProps) {
   // ── HDD/Linux: verified stage — start wipe ────────────────────────────────
   return (
     <>
-      <h3 className="font-semibold text-gray-800 mb-3">Step 3 — Wipe Drive</h3>
+      <h3 className="font-semibold text-gray-800 mb-3">Step 5 — Wipe Drive</h3>
 
       <div className="text-sm text-yellow-800 bg-yellow-50 border border-yellow-200 rounded px-3 py-2 mb-4">
         &#9888; This is irreversible. The drive will be overwritten.

@@ -3,9 +3,10 @@ import { useEffect, useRef, useState } from 'react'
 interface JobLogProps {
   jobId: number
   className?: string
+  height?: string
 }
 
-export function JobLog({ jobId, className = '' }: JobLogProps) {
+export function JobLog({ jobId, className = '', height = '300px' }: JobLogProps) {
   const [lines, setLines] = useState<string[]>([])
   const [done, setDone] = useState(false)
   const [showScrollBtn, setShowScrollBtn] = useState(false)
@@ -58,7 +59,8 @@ export function JobLog({ jobId, className = '' }: JobLogProps) {
       <div
         ref={containerRef}
         onScroll={handleScroll}
-        className="bg-gray-950 text-green-400 font-mono text-xs p-4 rounded overflow-y-auto h-64 leading-5"
+        className="bg-gray-950 text-green-400 font-mono text-xs p-4 rounded overflow-y-auto leading-5"
+        style={{ height }}
       >
         {lines.map((line, i) => (
           <div key={i}>{line}</div>

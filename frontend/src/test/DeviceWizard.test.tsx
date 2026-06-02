@@ -1,5 +1,4 @@
 import { screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { DeviceWizard } from '../pages/DeviceWizard'
 import { renderWithProviders } from './helpers'
@@ -8,10 +7,29 @@ vi.mock('../lib/api', () => ({
   getDevice: vi.fn(),
   getDupStats: vi.fn(),
   triggerJob: vi.fn(),
+  getDependencies: vi.fn(),
+  getFileEntries: vi.fn(),
+  clearStaging: vi.fn(),
 }))
 
 vi.mock('../components/JobLog', () => ({
   JobLog: ({ jobId }: { jobId: number }) => <div data-testid={`job-log-${jobId}`}>JobLog</div>,
+}))
+
+vi.mock('../stages/CatalogStage', () => ({
+  CatalogStage: ({ device }: { device: { stage: string } }) => (
+    <div data-testid="catalog-stage" data-stage={device.stage}>
+      CatalogStage
+    </div>
+  ),
+}))
+
+vi.mock('../stages/VerifyStage', () => ({
+  VerifyStage: ({ device }: { device: { stage: string } }) => (
+    <div data-testid="verify-stage" data-stage={device.stage}>
+      VerifyStage
+    </div>
+  ),
 }))
 
 vi.mock('../pages/MigrateStage', () => ({
@@ -69,37 +87,30 @@ describe('DeviceWizard', () => {
     renderWithProviders(<DeviceWizard />, { initialPath: '/devices/1', routePath: '/devices/:id' })
     await waitFor(() => screen.getByText('Test MBP'))
     expect(screen.getByText('Catalog')).toBeInTheDocument()
+    expect(screen.getByText('Analyze')).toBeInTheDocument()
   })
 
-  it('shows Start Catalog button for registered device with source', async () => {
+  it('renders CatalogStage', async () => {
     renderWithProviders(<DeviceWizard />, { initialPath: '/devices/1', routePath: '/devices/:id' })
-    await waitFor(() => screen.getByRole('button', { name: /start catalog/i }))
+    await waitFor(() => screen.getByTestId('catalog-stage'))
   })
 
-  it('triggers catalog job on button click', async () => {
+  it('shows analyze placeholder when not yet analyzed', async () => {
     renderWithProviders(<DeviceWizard />, { initialPath: '/devices/1', routePath: '/devices/:id' })
-    await waitFor(() => screen.getByRole('button', { name: /start catalog/i }))
-    await userEvent.click(screen.getByRole('button', { name: /start catalog/i }))
-    await waitFor(() => expect(triggerJob).toHaveBeenCalledWith(1, 'catalog'))
+    await waitFor(() => screen.getByText('Test MBP'))
+    expect(screen.getByText(/Step 2 — Analyze Duplicates/)).toBeInTheDocument()
   })
 
-  it('shows no source path warning when source_path is null', async () => {
-    vi.mocked(getDevice).mockResolvedValue(makeDevice({ source_path: null }))
-    renderWithProviders(<DeviceWizard />, { initialPath: '/devices/1', routePath: '/devices/:id' })
-    await waitFor(() => screen.getByText(/No source path set/))
-  })
-
-  it('shows catalog complete for cataloged stage', async () => {
+  it('shows analyze active section for cataloged device', async () => {
     vi.mocked(getDevice).mockResolvedValue(makeDevice({ stage: 'cataloged' }))
     renderWithProviders(<DeviceWizard />, { initialPath: '/devices/1', routePath: '/devices/:id' })
-    await waitFor(() => screen.getByText(/Catalog complete/))
+    await waitFor(() => screen.getByText(/Resolve Duplicates/))
   })
 
-  it('shows duplicate count when stats are available', async () => {
-    vi.mocked(getDevice).mockResolvedValue(makeDevice({ stage: 'cataloged' }))
-    vi.mocked(getDupStats).mockResolvedValue({ total: 3, resolved: 1, unresolved: 2 })
+  it('shows analyze complete for analyzed device', async () => {
+    vi.mocked(getDevice).mockResolvedValue(makeDevice({ stage: 'analyzed' }))
     renderWithProviders(<DeviceWizard />, { initialPath: '/devices/1', routePath: '/devices/:id' })
-    await waitFor(() => screen.getByText(/3 duplicate groups found/))
+    await waitFor(() => screen.getByText(/Duplicate analysis complete/))
   })
 
   it('shows migrate section as active when analyzed', async () => {
@@ -120,16 +131,22 @@ describe('DeviceWizard', () => {
     await waitFor(() => screen.getByTestId('migrate-stage'))
   })
 
+  it('shows VerifyStage for verifying device', async () => {
+    vi.mocked(getDevice).mockResolvedValue(makeDevice({ stage: 'verifying' }))
+    renderWithProviders(<DeviceWizard />, { initialPath: '/devices/1', routePath: '/devices/:id' })
+    await waitFor(() => screen.getByTestId('verify-stage'))
+  })
+
+  it('shows VerifyStage for verified device', async () => {
+    vi.mocked(getDevice).mockResolvedValue(makeDevice({ stage: 'verified' }))
+    renderWithProviders(<DeviceWizard />, { initialPath: '/devices/1', routePath: '/devices/:id' })
+    await waitFor(() => screen.getByTestId('verify-stage'))
+  })
+
   it('shows migrate placeholder when not yet in migrate stage', async () => {
     vi.mocked(getDevice).mockResolvedValue(makeDevice({ stage: 'cataloged' }))
     renderWithProviders(<DeviceWizard />, { initialPath: '/devices/1', routePath: '/devices/:id' })
     await waitFor(() => screen.getByText(/available after duplicates/i))
-  })
-
-  it('shows cataloging state when device is cataloging', async () => {
-    vi.mocked(getDevice).mockResolvedValue(makeDevice({ stage: 'cataloging' }))
-    renderWithProviders(<DeviceWizard />, { initialPath: '/devices/1', routePath: '/devices/:id' })
-    await waitFor(() => screen.getByText(/Starting catalog job/i))
   })
 
   it('shows WipeStage for verified device', async () => {
@@ -159,12 +176,12 @@ describe('DeviceWizard', () => {
   it('shows wipe placeholder when not yet in wipe stage', async () => {
     vi.mocked(getDevice).mockResolvedValue(makeDevice({ stage: 'cataloged' }))
     renderWithProviders(<DeviceWizard />, { initialPath: '/devices/1', routePath: '/devices/:id' })
-    await waitFor(() => screen.getByText(/Step 3 — Wipe/))
+    await waitFor(() => screen.getByText(/Step 5 — Wipe/))
   })
 
   it('shows recycle placeholder when not yet in recycle stage', async () => {
     vi.mocked(getDevice).mockResolvedValue(makeDevice({ stage: 'cataloged' }))
     renderWithProviders(<DeviceWizard />, { initialPath: '/devices/1', routePath: '/devices/:id' })
-    await waitFor(() => screen.getByText(/Step 4 — Recycle/))
+    await waitFor(() => screen.getByText(/Step 6 — Recycle/))
   })
 })

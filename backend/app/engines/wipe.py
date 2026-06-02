@@ -84,18 +84,21 @@ async def _run_nwipe(
     block_device = _resolve_block_device(source)
 
     if sys.platform == "darwin":
+        method = "diskutil secureErase (3 passes)"
         cmd = ["diskutil", "secureErase", "3", block_device]
     else:
+        method = "nwipe DoD 5220.22-M (3 passes)"
         cmd = ["nwipe", "--autonuke", "--method=dod522022m", block_device]
+
+    # Write metadata immediately so the frontend can display wipe details during the job.
+    job = session.get(Job, job_id)
+    if job:
+        job.job_metadata = json.dumps({"method": method, "block_device": block_device})
+        session.add(job)
+        session.commit()
 
     async for _ in runner.run(job_id, cmd):
         pass
-
-    job = session.get(Job, job_id)
-    if job and job.status == JobStatus.completed:
-        job.job_metadata = json.dumps({"method": "nwipe", "block_device": block_device})
-        session.add(job)
-        session.commit()
 
 
 def _resolve_block_device(mount_point: str) -> str:

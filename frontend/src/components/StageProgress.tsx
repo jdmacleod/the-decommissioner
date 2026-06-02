@@ -1,7 +1,8 @@
 import type { DeviceStage } from '../types/api'
 
 const STAGES: { label: string; stages: DeviceStage[] }[] = [
-  { label: 'Catalog', stages: ['registered', 'cataloging', 'cataloged', 'analyzing', 'analyzed'] },
+  { label: 'Catalog', stages: ['registered', 'cataloging', 'cataloged'] },
+  { label: 'Analyze', stages: ['analyzing', 'analyzed'] },
   { label: 'Migrate', stages: ['migrating', 'migrated'] },
   { label: 'Verify', stages: ['verifying', 'verified'] },
   { label: 'Wipe', stages: ['wiping', 'wiped'] },

@@ -1,11 +1,19 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { getDevices } from '../lib/api'
+import { getDevices, getDupStats, getFileEntries } from '../lib/api'
 import type { Device, DeviceStage } from '../types/api'
 
 const STAGE_GROUPS: { label: string; stages: DeviceStage[]; color: string }[] = [
-  { label: 'Catalog', stages: ['registered', 'cataloging', 'cataloged', 'analyzing', 'analyzed'], color: 'border-blue-400' },
-  { label: 'Migrate', stages: ['migrating', 'migrated', 'verifying', 'verified'], color: 'border-yellow-400' },
+  {
+    label: 'Catalog',
+    stages: ['registered', 'cataloging', 'cataloged', 'analyzing', 'analyzed'],
+    color: 'border-blue-400',
+  },
+  {
+    label: 'Migrate',
+    stages: ['migrating', 'migrated', 'verifying', 'verified'],
+    color: 'border-yellow-400',
+  },
   { label: 'Wipe', stages: ['wiping', 'wiped'], color: 'border-orange-400' },
   { label: 'Done', stages: ['recycled'], color: 'border-green-400' },
 ]
@@ -27,12 +35,18 @@ const STAGE_LABELS: Partial<Record<DeviceStage, string>> = {
 
 function nextAction(device: Device): { label: string; href: string } | null {
   switch (device.stage) {
-    case 'registered': return { label: 'Start Catalog →', href: `/devices/${device.id}` }
-    case 'cataloged': return { label: 'Review Files →', href: `/devices/${device.id}/files` }
-    case 'analyzed': return { label: 'Start Migration →', href: `/devices/${device.id}` }
-    case 'verified': return { label: 'Start Wipe →', href: `/devices/${device.id}` }
-    case 'wiped': return { label: 'Recycle →', href: `/devices/${device.id}` }
-    default: return null
+    case 'registered':
+      return { label: 'Start Catalog →', href: `/devices/${device.id}` }
+    case 'cataloged':
+      return { label: 'Review Files →', href: `/devices/${device.id}/files` }
+    case 'analyzed':
+      return { label: 'Start Migration →', href: `/devices/${device.id}` }
+    case 'verified':
+      return { label: 'Start Wipe →', href: `/devices/${device.id}` }
+    case 'wiped':
+      return { label: 'Recycle →', href: `/devices/${device.id}` }
+    default:
+      return null
   }
 }
 
@@ -43,6 +57,46 @@ const TYPE_ICON: Record<string, string> = {
   ipad: '📲',
   usb_drive: '🗂',
   hard_drive: '💾',
+}
+
+const POST_CATALOG: DeviceStage[] = [
+  'cataloged', 'analyzing', 'analyzed',
+  'migrating', 'migrated', 'verifying', 'verified',
+  'wiping', 'wiped', 'recycled',
+]
+
+function DeviceCardStats({ device }: { device: Device }) {
+  const enabled = POST_CATALOG.includes(device.stage)
+
+  const { data: fileCountPage } = useQuery({
+    queryKey: ['file-entries-count', device.id],
+    queryFn: () => getFileEntries({ device_id: device.id, limit: 1 }),
+    enabled,
+    staleTime: 120_000,
+  })
+
+  const { data: dupStats } = useQuery({
+    queryKey: ['dup-stats', device.id],
+    queryFn: () => getDupStats(device.id),
+    enabled,
+    staleTime: 120_000,
+  })
+
+  if (!enabled || (!fileCountPage && !dupStats)) return null
+
+  return (
+    <div className="mt-2 text-xs text-gray-400 space-y-0.5">
+      {fileCountPage && (
+        <div>{fileCountPage.total.toLocaleString()} files</div>
+      )}
+      {dupStats && dupStats.total > 0 && (
+        <div>
+          {dupStats.total} dup group{dupStats.total !== 1 ? 's' : ''}
+          {dupStats.unresolved > 0 ? ` · ${dupStats.unresolved} unresolved` : ' · all resolved'}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function DeviceCard({ device }: { device: Device }) {
@@ -68,6 +122,7 @@ function DeviceCard({ device }: { device: Device }) {
             {device.source_path}
           </div>
         )}
+        <DeviceCardStats device={device} />
       </Link>
       {action && (
         <Link
@@ -117,7 +172,9 @@ export function Dashboard() {
             const groupDevices = devices.filter((d) => group.stages.includes(d.stage))
             return (
               <div key={group.label}>
-                <div className={`text-xs font-semibold text-gray-500 uppercase mb-3 pb-2 border-b-2 ${group.color}`}>
+                <div
+                  className={`text-xs font-semibold text-gray-500 uppercase mb-3 pb-2 border-b-2 ${group.color}`}
+                >
                   {group.label} ({groupDevices.length})
                 </div>
                 <div className="space-y-3">

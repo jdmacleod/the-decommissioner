@@ -143,3 +143,7 @@ export const updateStorageTarget = (id: number, body: StorageTargetUpdate) =>
 // Staging dir cleanup (iOS devices)
 export const clearStaging = (deviceId: number) =>
   request<Device>(`/devices/${deviceId}/clear-staging`, { method: 'POST' })
+
+// Detect mounted volumes (for HDD/USB source path selection)
+export const detectVolumes = () =>
+  request<{ path: string; label: string }[]>('/devices/detect-volumes')

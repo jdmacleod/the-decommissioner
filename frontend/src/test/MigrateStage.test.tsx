@@ -3,11 +3,10 @@ import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MigrateStage } from '../pages/MigrateStage'
 import { renderWithProviders } from './helpers'
-import type { Device, StorageTarget, Snapshot } from '../types/api'
+import type { Device, StorageTarget } from '../types/api'
 
 vi.mock('../lib/api', () => ({
   getStorageTargets: vi.fn(),
-  getSnapshots: vi.fn(),
   triggerJob: vi.fn(),
 }))
 
@@ -17,7 +16,7 @@ vi.mock('../components/JobLog', () => ({
   ),
 }))
 
-import { getStorageTargets, getSnapshots, triggerJob } from '../lib/api'
+import { getStorageTargets, triggerJob } from '../lib/api'
 
 const makeDevice = (overrides: Partial<Device> = {}): Device => ({
   id: 1,
@@ -44,24 +43,8 @@ const makeTarget = (overrides: Partial<StorageTarget> = {}): StorageTarget => ({
   ...overrides,
 })
 
-const makeSnapshot = (overrides: Partial<Snapshot> = {}): Snapshot => ({
-  id: 1,
-  device_id: 1,
-  job_id: 1,
-  storage_target_id: 1,
-  restic_snapshot_id: 'abc12345',
-  file_count: 5000,
-  total_bytes: 2_000_000_000,
-  added_bytes: 1_800_000_000,
-  tags: null,
-  taken_at: '2024-01-01T00:00:00Z',
-  verified_at: '2024-01-01T01:00:00Z',
-  ...overrides,
-})
-
 beforeEach(() => {
   vi.mocked(getStorageTargets).mockResolvedValue([makeTarget()])
-  vi.mocked(getSnapshots).mockResolvedValue([])
   vi.mocked(triggerJob).mockResolvedValue({ job_id: 42, status: 'pending' })
 })
 
@@ -72,6 +55,11 @@ describe('MigrateStage', () => {
   it('shows Start Migration button for analyzed device', async () => {
     render(makeDevice())
     await waitFor(() => screen.getByRole('button', { name: /start migration/i }))
+  })
+
+  it('shows Step 3 heading', async () => {
+    render(makeDevice())
+    await waitFor(() => screen.getByText(/Step 3 — Migrate to Storage/))
   })
 
   it('shows storage target dropdown', async () => {
@@ -106,34 +94,19 @@ describe('MigrateStage', () => {
     await waitFor(() => screen.getByText(/migrating files/i))
   })
 
-  it('shows migration complete verifying state when migrated', async () => {
+  it('shows verifying spinner for migrated stage', async () => {
     render(makeDevice({ stage: 'migrated' }))
     await waitFor(() => screen.getByText(/migration complete/i))
   })
 
-  it('shows verifying spinner when verifying', async () => {
+  it('shows complete state for verifying stage', async () => {
     render(makeDevice({ stage: 'verifying' }))
-    await waitFor(() => screen.getByText(/verification in progress/i))
+    await waitFor(() => screen.getByText(/Migration complete/))
   })
 
-  it('shows verified state with snapshot info', async () => {
-    vi.mocked(getSnapshots).mockResolvedValue([makeSnapshot()])
+  it('shows complete state for verified stage', async () => {
     render(makeDevice({ stage: 'verified' }))
-    await waitFor(() => screen.getByText(/migration and verification complete/i))
-    await waitFor(() => screen.getByText(/abc12345/))
-  })
-
-  it('shows verified state without snapshot when none exist', async () => {
-    vi.mocked(getSnapshots).mockResolvedValue([])
-    render(makeDevice({ stage: 'verified' }))
-    await waitFor(() => screen.getByText(/migration and verification complete/i))
-    expect(screen.queryByText(/abc12345/)).not.toBeInTheDocument()
-  })
-
-  it('shows restic check passed message when verified', async () => {
-    vi.mocked(getSnapshots).mockResolvedValue([makeSnapshot()])
-    render(makeDevice({ stage: 'verified' }))
-    await waitFor(() => screen.getByText(/restic check passed/i))
+    await waitFor(() => screen.getByText(/Migration complete/))
   })
 
   it('disables start button when no targets', async () => {

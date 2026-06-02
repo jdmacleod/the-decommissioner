@@ -1,5 +1,6 @@
 """Tests for device CRUD and job-trigger API."""
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
@@ -417,3 +418,29 @@ def test_background_ios_extract_task(
         d = s.get(Device, 1)
         assert d is not None
         assert d.stage.value in ("cataloged", "registered")
+
+
+def test_detect_volumes_returns_list(client: TestClient) -> None:
+    r = client.get("/api/devices/detect-volumes")
+    assert r.status_code == 200
+    data = r.json()
+    assert isinstance(data, list)
+    for entry in data:
+        assert "path" in entry
+        assert "label" in entry
+
+
+def test_detect_volumes_on_darwin(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    import unittest.mock as mock
+
+    monkeypatch.setattr("app.api.devices.sys.platform", "darwin")
+    with (
+        mock.patch("app.api.devices.os.listdir", return_value=["Macintosh HD", ".hidden"]),
+        mock.patch("app.api.devices.os.path.isdir", return_value=True),
+    ):
+        r = client.get("/api/devices/detect-volumes")
+    assert r.status_code == 200
+    data = r.json()
+    labels = [e["label"] for e in data]
+    assert ".hidden" not in labels
+    assert "Macintosh HD" in labels

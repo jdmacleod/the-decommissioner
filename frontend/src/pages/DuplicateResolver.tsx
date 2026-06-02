@@ -16,7 +16,7 @@ export function DuplicateResolver() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [cursor, setCursor] = useState(0)
-  const [showResolved, setShowResolved] = useState(false)
+  const [showUnresolvedOnly, setShowUnresolvedOnly] = useState(true)
 
   const { data: device } = useQuery({
     queryKey: ['device', deviceId],
@@ -26,8 +26,8 @@ export function DuplicateResolver() {
 
   // Fetching groups triggers the cataloged → analyzing stage transition server-side
   const { data: groups = [], isLoading } = useQuery({
-    queryKey: ['duplicate-groups', deviceId, showResolved ? 'all' : 'unresolved'],
-    queryFn: () => getDuplicateGroups(deviceId, showResolved ? undefined : false),
+    queryKey: ['duplicate-groups', deviceId, showUnresolvedOnly ? 'unresolved' : 'all'],
+    queryFn: () => getDuplicateGroups(deviceId, showUnresolvedOnly ? false : undefined),
     refetchInterval: 5000,
   })
 
@@ -44,7 +44,6 @@ export function DuplicateResolver() {
       queryClient.invalidateQueries({ queryKey: ['duplicate-groups', deviceId] })
       queryClient.invalidateQueries({ queryKey: ['dup-stats', deviceId] })
       queryClient.invalidateQueries({ queryKey: ['device', deviceId] })
-      // Advance cursor if there are more groups
       setCursor((c) => Math.max(0, c))
     },
   })
@@ -61,9 +60,23 @@ export function DuplicateResolver() {
 
   const totalGroups = groups.length
   const group: DuplicateGroup | undefined = groups[cursor]
-  const wastedBytes = groups.reduce((sum, g) => sum + g.total_size_bytes - (g.entries[0]?.size_bytes ?? 0), 0)
+  const wastedBytes = groups.reduce(
+    (sum, g) => sum + g.total_size_bytes - (g.entries[0]?.size_bytes ?? 0),
+    0,
+  )
 
   const allResolved = stats && stats.unresolved === 0 && stats.total > 0
+
+  function skipGroup() {
+    if (cursor < totalGroups - 1) {
+      setCursor((c) => c + 1)
+    }
+  }
+
+  function keepTopEntry() {
+    if (!group || group.entries.length === 0) return
+    resolveMutation.mutate({ groupId: group.id, canonicalId: group.entries[0].id })
+  }
 
   if (isLoading) return <div className="p-8 text-gray-500">Loading groups…</div>
 
@@ -87,12 +100,16 @@ export function DuplicateResolver() {
                 <div className="flex items-center gap-2 mb-1">
                   <div
                     className="h-2 rounded-full bg-green-500 transition-all"
-                    style={{ width: `${stats.total > 0 ? (stats.resolved / stats.total) * 100 : 0}%`, minWidth: 4 }}
+                    style={{
+                      width: `${stats.total > 0 ? (stats.resolved / stats.total) * 100 : 0}%`,
+                      minWidth: 4,
+                    }}
                   />
                   <div className="h-2 rounded-full bg-gray-200 flex-1" />
                 </div>
                 <div className="text-xs text-gray-500">
-                  {stats.resolved.toLocaleString()} resolved · {stats.unresolved.toLocaleString()} remaining
+                  {stats.resolved.toLocaleString()} resolved · {stats.unresolved.toLocaleString()}{' '}
+                  remaining
                   {wastedBytes > 0 && ` · ${formatBytes(wastedBytes)} recoverable`}
                 </div>
               </>
@@ -101,11 +118,14 @@ export function DuplicateResolver() {
           <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
             <input
               type="checkbox"
-              checked={showResolved}
-              onChange={(e) => { setShowResolved(e.target.checked); setCursor(0) }}
+              checked={showUnresolvedOnly}
+              onChange={(e) => {
+                setShowUnresolvedOnly(e.target.checked)
+                setCursor(0)
+              }}
               className="rounded"
             />
-            Show resolved
+            Show unresolved only
           </label>
           <button
             onClick={() => autoMutation.mutate()}
@@ -117,7 +137,7 @@ export function DuplicateResolver() {
         </div>
 
         {/* All done */}
-        {allResolved && !showResolved && (
+        {allResolved && showUnresolvedOnly && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
             <div className="text-green-700 font-semibold text-lg mb-1">All duplicates resolved</div>
             <div className="text-green-600 text-sm mb-4">
@@ -135,7 +155,7 @@ export function DuplicateResolver() {
         {/* No groups */}
         {!isLoading && totalGroups === 0 && !allResolved && (
           <div className="text-gray-500 text-sm text-center py-12">
-            {showResolved ? 'No groups to show.' : 'No unresolved duplicate groups.'}
+            {showUnresolvedOnly ? 'No unresolved duplicate groups.' : 'No groups to show.'}
           </div>
         )}
 
@@ -176,29 +196,49 @@ export function DuplicateResolver() {
                     <div className="pt-0.5">
                       {!group.resolved ? (
                         <button
-                          onClick={() => resolveMutation.mutate({ groupId: group.id, canonicalId: entry.id })}
+                          onClick={() =>
+                            resolveMutation.mutate({ groupId: group.id, canonicalId: entry.id })
+                          }
                           disabled={resolveMutation.isPending}
                           className="w-5 h-5 rounded-full border-2 border-gray-300 hover:border-green-500 hover:bg-green-100 transition-colors flex items-center justify-center"
                           title="Keep this copy"
                         >
-                          {resolveMutation.isPending && <span className="w-2 h-2 rounded-full bg-gray-300" />}
+                          {resolveMutation.isPending && (
+                            <span className="w-2 h-2 rounded-full bg-gray-300" />
+                          )}
                         </button>
                       ) : (
-                        <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-                          isCanonical ? 'bg-green-500 text-white' : 'bg-red-200 text-red-700'
-                        }`}>
+                        <div
+                          className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
+                            isCanonical ? 'bg-green-500 text-white' : 'bg-red-200 text-red-700'
+                          }`}
+                        >
                           {isCanonical ? '✓' : '✕'}
                         </div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className={`text-xs font-mono truncate ${isCanonical && group.resolved ? 'font-semibold text-green-800' : 'text-gray-700'}`}>
+                      <div
+                        className={`text-xs font-mono truncate ${
+                          isCanonical && group.resolved
+                            ? 'font-semibold text-green-800'
+                            : 'text-gray-700'
+                        }`}
+                      >
                         {entry.path}
                       </div>
                       <div className="text-xs text-gray-400 mt-0.5 flex gap-3">
                         <span>{formatBytes(entry.size_bytes)}</span>
                         <span>{new Date(entry.mtime).toLocaleDateString()}</span>
-                        <span className={`font-medium ${entry.status === 'keep' ? 'text-green-600' : entry.status === 'discard' ? 'text-red-500' : 'text-gray-400'}`}>
+                        <span
+                          className={`font-medium ${
+                            entry.status === 'keep'
+                              ? 'text-green-600'
+                              : entry.status === 'discard'
+                                ? 'text-red-500'
+                                : 'text-gray-400'
+                          }`}
+                        >
                           {entry.status}
                         </span>
                       </div>
@@ -208,10 +248,27 @@ export function DuplicateResolver() {
               })}
             </div>
 
-            {/* Navigation */}
+            {/* Actions for unresolved group */}
             {!group.resolved && (
-              <div className="border-t border-gray-100 px-5 py-3 bg-gray-50 text-xs text-gray-500">
-                Click a radio button to keep that copy; the others will be marked discard.
+              <div className="border-t border-gray-100 px-5 py-3 bg-gray-50 flex items-center gap-3">
+                <span className="text-xs text-gray-500 flex-1">
+                  Click a radio button to keep that copy; the others will be marked discard.
+                </span>
+                <button
+                  onClick={keepTopEntry}
+                  disabled={resolveMutation.isPending}
+                  className="text-xs border border-gray-300 px-2 py-1 rounded hover:bg-gray-100 disabled:opacity-50"
+                  title="Keep first entry, discard the rest"
+                >
+                  Keep top
+                </button>
+                <button
+                  onClick={skipGroup}
+                  disabled={cursor >= totalGroups - 1}
+                  className="text-xs border border-gray-300 px-2 py-1 rounded hover:bg-gray-100 disabled:opacity-40"
+                >
+                  Skip →
+                </button>
               </div>
             )}
           </div>

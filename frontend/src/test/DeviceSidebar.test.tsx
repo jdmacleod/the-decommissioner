@@ -6,9 +6,10 @@ import { renderWithProviders } from './helpers'
 vi.mock('../lib/api', () => ({
   getDevices: vi.fn(),
   getDependencies: vi.fn(),
+  getStorageTargets: vi.fn(),
 }))
 
-import { getDevices, getDependencies } from '../lib/api'
+import { getDevices, getDependencies, getStorageTargets } from '../lib/api'
 
 const mockDep = (name: string, status: 'found' | 'missing') => ({
   id: 1, name, status, version: null, required_for: '[]', install_hint: `install ${name}`, checked_at: '',
@@ -24,6 +25,7 @@ const makeDevice = (id: number, name: string, stage: DeviceStage = 'registered',
 beforeEach(() => {
   vi.mocked(getDevices).mockResolvedValue([])
   vi.mocked(getDependencies).mockResolvedValue([])
+  vi.mocked(getStorageTargets).mockResolvedValue([])
 })
 
 describe('DeviceSidebar', () => {

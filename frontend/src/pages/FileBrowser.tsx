@@ -205,6 +205,22 @@ export function FileBrowser() {
             <option key={s.value} value={s.value}>{s.label}</option>
           ))}
         </select>
+        <button
+          onClick={() => {
+            items.forEach((item) => setRowStatus(item.id, 'keep'))
+          }}
+          className="text-xs border border-green-300 text-green-700 px-2 py-1 rounded hover:bg-green-50"
+        >
+          Select All Keep
+        </button>
+        <button
+          onClick={() => {
+            items.forEach((item) => setRowStatus(item.id, 'discard'))
+          }}
+          className="text-xs border border-red-300 text-red-700 px-2 py-1 rounded hover:bg-red-50"
+        >
+          Select All Discard
+        </button>
         {isFetching && <span className="text-xs text-gray-400">Loading…</span>}
       </div>
 

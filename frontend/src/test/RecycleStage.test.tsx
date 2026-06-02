@@ -34,9 +34,9 @@ const render = (device: Device) =>
   renderWithProviders(<RecycleStage device={device} deviceId={device.id} />)
 
 describe('RecycleStage', () => {
-  it('shows Step 4 heading', async () => {
+  it('shows Step 6 heading', async () => {
     render(makeDevice())
-    await waitFor(() => screen.getByText(/step 4/i))
+    await waitFor(() => screen.getByText(/step 6/i))
   })
 
   it('shows recycling options for wiped device', async () => {

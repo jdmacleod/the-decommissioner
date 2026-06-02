@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { createDevice, detectIos } from '../lib/api'
+import { createDevice, detectIos, detectVolumes } from '../lib/api'
 import type { DeviceType } from '../types/api'
 
 const DEVICE_TYPES: { value: DeviceType; label: string }[] = [
@@ -14,6 +14,7 @@ const DEVICE_TYPES: { value: DeviceType; label: string }[] = [
 ]
 
 const IOS_TYPES: DeviceType[] = ['iphone', 'ipad']
+const VOLUME_TYPES: DeviceType[] = ['hard_drive', 'usb_drive']
 
 export function AddDevice() {
   const navigate = useNavigate()
@@ -24,6 +25,8 @@ export function AddDevice() {
   const [serialNumber, setSerialNumber] = useState('')
   const [notes, setNotes] = useState('')
   const [detectError, setDetectError] = useState<string | null>(null)
+  const [volumes, setVolumes] = useState<{ path: string; label: string }[]>([])
+  const [volumeScanDone, setVolumeScanDone] = useState(false)
 
   const mutation = useMutation({
     mutationFn: createDevice,
@@ -49,6 +52,21 @@ export function AddDevice() {
     },
   })
 
+  const volumeMutation = useMutation({
+    mutationFn: detectVolumes,
+    onSuccess: (result) => {
+      setVolumes(result)
+      setVolumeScanDone(true)
+      if (result.length > 0 && !sourcePath) {
+        setSourcePath(result[0].path)
+      }
+    },
+    onError: () => {
+      setVolumeScanDone(true)
+      setVolumes([])
+    },
+  })
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     mutation.mutate({
@@ -61,6 +79,7 @@ export function AddDevice() {
   }
 
   const isIos = IOS_TYPES.includes(deviceType)
+  const isVolumeBased = VOLUME_TYPES.includes(deviceType)
 
   return (
     <div className="max-w-lg mx-auto p-6">
@@ -73,11 +92,15 @@ export function AddDevice() {
             onChange={(e) => {
               setDeviceType(e.target.value as DeviceType)
               setDetectError(null)
+              setVolumes([])
+              setVolumeScanDone(false)
             }}
             className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
           >
             {DEVICE_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>{t.label}</option>
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
             ))}
           </select>
         </div>
@@ -92,11 +115,9 @@ export function AddDevice() {
             >
               {detectMutation.isPending ? 'Detecting…' : 'Detect Connected Device'}
             </button>
-            {detectError && (
-              <span className="text-xs text-red-600">{detectError}</span>
-            )}
+            {detectError && <span className="text-xs text-red-600">{detectError}</span>}
             {detectMutation.isSuccess && !detectError && (
-              <span className="text-xs text-green-600">&#10003; Device detected</span>
+              <span className="text-xs text-green-600">✓ Device detected</span>
             )}
           </div>
         )}
@@ -114,20 +135,50 @@ export function AddDevice() {
 
         {!isIos && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Source Path</label>
-            <input
-              value={sourcePath}
-              onChange={(e) => setSourcePath(e.target.value)}
-              placeholder="/Volumes/MyDrive"
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono"
-            />
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-sm font-medium text-gray-700">Source Path</label>
+              {isVolumeBased && (
+                <button
+                  type="button"
+                  onClick={() => volumeMutation.mutate()}
+                  disabled={volumeMutation.isPending}
+                  className="text-xs text-blue-600 hover:underline disabled:opacity-50"
+                >
+                  {volumeMutation.isPending ? 'Scanning…' : 'Scan volumes'}
+                </button>
+              )}
+            </div>
+            {isVolumeBased && volumeScanDone && volumes.length > 0 ? (
+              <select
+                value={sourcePath}
+                onChange={(e) => setSourcePath(e.target.value)}
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono"
+              >
+                {volumes.map((v) => (
+                  <option key={v.path} value={v.path}>
+                    {v.label} — {v.path}
+                  </option>
+                ))}
+                <option value="">Enter manually…</option>
+              </select>
+            ) : (
+              <input
+                value={sourcePath}
+                onChange={(e) => setSourcePath(e.target.value)}
+                placeholder="/Volumes/MyDrive"
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono"
+              />
+            )}
+            {isVolumeBased && volumeScanDone && volumes.length === 0 && (
+              <div className="text-xs text-gray-400 mt-1">No volumes detected. Enter path manually.</div>
+            )}
           </div>
         )}
 
         {isIos && (
           <div className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded px-3 py-2">
-            iOS devices are extracted to a local staging directory automatically.
-            Connect the device and use &ldquo;Detect&rdquo; above to auto-fill fields.
+            iOS devices are extracted to a local staging directory automatically. Connect the
+            device and use &ldquo;Detect&rdquo; above to auto-fill fields.
           </div>
         )}
 

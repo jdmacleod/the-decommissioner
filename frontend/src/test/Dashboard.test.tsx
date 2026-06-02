@@ -5,9 +5,11 @@ import { renderWithProviders } from './helpers'
 
 vi.mock('../lib/api', () => ({
   getDevices: vi.fn(),
+  getDupStats: vi.fn(),
+  getFileEntries: vi.fn(),
 }))
 
-import { getDevices } from '../lib/api'
+import { getDevices, getDupStats, getFileEntries } from '../lib/api'
 
 const makeDevice = (overrides = {}) => ({
   id: 1, name: 'Test MBP', device_type: 'mac' as const, stage: 'registered' as const,
@@ -18,6 +20,8 @@ const makeDevice = (overrides = {}) => ({
 
 beforeEach(() => {
   vi.mocked(getDevices).mockResolvedValue([])
+  vi.mocked(getDupStats).mockResolvedValue({ total: 0, resolved: 0, unresolved: 0 })
+  vi.mocked(getFileEntries).mockResolvedValue({ items: [], total: 0, page: 0, limit: 1 })
 })
 
 describe('Dashboard', () => {

@@ -7,9 +7,10 @@ import { renderWithProviders } from './helpers'
 vi.mock('../lib/api', () => ({
   createDevice: vi.fn(),
   detectIos: vi.fn(),
+  detectVolumes: vi.fn(),
 }))
 
-import { createDevice, detectIos } from '../lib/api'
+import { createDevice, detectIos, detectVolumes } from '../lib/api'
 
 const newDevice = {
   id: 1, name: 'My Drive', device_type: 'hard_drive' as const, stage: 'registered' as const,
@@ -20,6 +21,7 @@ const newDevice = {
 beforeEach(() => {
   vi.mocked(createDevice).mockResolvedValue(newDevice)
   vi.mocked(detectIos).mockResolvedValue({ available: true, name: "Jason's iPhone", serial: 'ABC123' })
+  vi.mocked(detectVolumes).mockResolvedValue([])
 })
 
 describe('AddDevice form', () => {
@@ -140,5 +142,38 @@ describe('AddDevice form', () => {
     renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
     await userEvent.selectOptions(screen.getByRole('combobox'), 'iphone')
     expect(screen.queryByPlaceholderText('/Volumes/MyDrive')).not.toBeInTheDocument()
+  })
+
+  it('shows Scan volumes button for hard_drive type', () => {
+    renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
+    expect(screen.getByRole('button', { name: /scan volumes/i })).toBeInTheDocument()
+  })
+
+  it('shows Scan volumes button for usb_drive type', async () => {
+    renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'usb_drive')
+    expect(screen.getByRole('button', { name: /scan volumes/i })).toBeInTheDocument()
+  })
+
+  it('does not show Scan volumes for mac type', async () => {
+    renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'mac')
+    expect(screen.queryByRole('button', { name: /scan volumes/i })).not.toBeInTheDocument()
+  })
+
+  it('shows volumes dropdown when volumes are found', async () => {
+    vi.mocked(detectVolumes).mockResolvedValue([
+      { path: '/Volumes/MyDisk', label: 'MyDisk' },
+    ])
+    renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
+    await userEvent.click(screen.getByRole('button', { name: /scan volumes/i }))
+    await waitFor(() => screen.getByText(/MyDisk/))
+  })
+
+  it('shows no volumes message when scan finds nothing', async () => {
+    vi.mocked(detectVolumes).mockResolvedValue([])
+    renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
+    await userEvent.click(screen.getByRole('button', { name: /scan volumes/i }))
+    await waitFor(() => screen.getByText(/No volumes detected/i))
   })
 })

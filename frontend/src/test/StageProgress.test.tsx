@@ -6,6 +6,7 @@ describe('StageProgress', () => {
   it('shows all stage labels', () => {
     render(<StageProgress stage="registered" />)
     expect(screen.getByText('Catalog')).toBeInTheDocument()
+    expect(screen.getByText('Analyze')).toBeInTheDocument()
     expect(screen.getByText('Migrate')).toBeInTheDocument()
     expect(screen.getByText('Verify')).toBeInTheDocument()
     expect(screen.getByText('Wipe')).toBeInTheDocument()

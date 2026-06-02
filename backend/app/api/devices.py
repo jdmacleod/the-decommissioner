@@ -1,4 +1,6 @@
 import asyncio
+import os
+import sys
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Request
@@ -44,6 +46,47 @@ def detect_ios() -> dict:
     from app.engines.ios import detect_ios_device
 
     return detect_ios_device()
+
+
+class VolumeEntry(BaseModel):
+    path: str
+    label: str
+
+
+@router.get("/detect-volumes", response_model=list[VolumeEntry])
+def detect_volumes() -> list[VolumeEntry]:
+    """Return a list of mounted volumes suitable for use as a source path."""
+    results: list[VolumeEntry] = []
+    if sys.platform == "darwin":
+        base = "/Volumes"
+        try:
+            for name in sorted(os.listdir(base)):
+                if name.startswith("."):
+                    continue
+                path = os.path.join(base, name)
+                if os.path.isdir(path):
+                    results.append(VolumeEntry(path=path, label=name))
+        except OSError:
+            pass
+    else:
+        for base in ("/media", "/mnt"):
+            try:
+                for entry in sorted(os.listdir(base)):
+                    if entry.startswith("."):
+                        continue
+                    candidate = os.path.join(base, entry)
+                    if os.path.isdir(candidate):
+                        sub = os.listdir(candidate)
+                        if sub and any(os.path.isdir(os.path.join(candidate, s)) for s in sub):
+                            for name in sorted(sub):
+                                path = os.path.join(candidate, name)
+                                if os.path.isdir(path):
+                                    results.append(VolumeEntry(path=path, label=name))
+                        else:
+                            results.append(VolumeEntry(path=candidate, label=entry))
+            except OSError:
+                pass
+    return results
 
 
 @router.get("/{device_id}", response_model=DeviceRead)
