@@ -72,6 +72,7 @@ def delete_device(device_id: int, session: SessionDep):
 
 class JobTriggerRequest(BaseModel):
     job_type: JobType
+    storage_target_id: int | None = None
 
 
 @router.post("/{device_id}/jobs", status_code=202)
@@ -112,9 +113,10 @@ async def trigger_job(
     job = create_job(session, device_id=device_id, job_type=job_type)
 
     runner = get_runner(request)
+    target_id = body.storage_target_id
 
     # Spawn background task — import engines lazily to avoid circular deps
-    async def _run():
+    async def _run() -> None:
         from app.core.database import get_session as _get_session
         from app.models.enums import JobStatus as _JS
         from app.models.job import Job as _Job
@@ -126,19 +128,88 @@ async def trigger_job(
                 with _get_session() as bg_session:
                     bg_device = bg_session.get(Device, device_id)
                     await run_catalog(job.id or 0, bg_device, bg_session, runner)
-                    # Only advance stage if job succeeded
-                    with _get_session() as check_session:
-                        finished_job = check_session.get(_Job, job.id)
-                        success = finished_job and finished_job.status == _JS.completed
-                    with _get_session() as upd_session:
-                        upd_device = upd_session.get(Device, device_id)
+                with _get_session() as check_session:
+                    finished_job = check_session.get(_Job, job.id)
+                    success = finished_job and finished_job.status == _JS.completed
+                with _get_session() as upd_session:
+                    upd_device = upd_session.get(Device, device_id)
+                    if upd_device:
+                        upd_device.stage = DeviceStage.cataloged if success else prev_stage
+                        upd_device.updated_at = datetime.utcnow()
+                        upd_session.add(upd_device)
+                        upd_session.commit()
+
+            elif job_type == JobType.migrate:
+                from app.engines.migrate import run_migrate
+                from app.engines.verify import run_verify
+                from app.models.storage_target import StorageTarget as _ST
+
+                resolved_target_id: int | None = None
+                with _get_session() as bg_session:
+                    st = (
+                        bg_session.get(_ST, target_id)
+                        if target_id
+                        else bg_session.exec(
+                            select(_ST).where(_ST.is_default == True)  # noqa: E712
+                        ).first()
+                    )
+                    if not st:
+                        raise RuntimeError("No storage target configured. Add one in Settings.")
+                    resolved_target_id = st.id
+                    bg_device = bg_session.get(Device, device_id)
+                    await run_migrate(job.id or 0, bg_device, st, bg_session, runner)
+
+                with _get_session() as check_session:
+                    finished_job = check_session.get(_Job, job.id)
+                    migrate_ok = finished_job and finished_job.status == _JS.completed
+
+                if migrate_ok:
+                    with _get_session() as upd:
+                        upd_device = upd.get(Device, device_id)
                         if upd_device:
-                            upd_device.stage = DeviceStage.cataloged if success else prev_stage
+                            upd_device.stage = DeviceStage.migrated
                             upd_device.updated_at = datetime.utcnow()
-                            upd_session.add(upd_device)
-                            upd_session.commit()
+                            upd.add(upd_device)
+                            upd.commit()
+
+                    verify_job = None
+                    with _get_session() as vs:
+                        verify_job = create_job(vs, device_id, JobType.verify)
+                        v_device = vs.get(Device, device_id)
+                        if v_device:
+                            v_device.stage = DeviceStage.verifying
+                            v_device.updated_at = datetime.utcnow()
+                            vs.add(v_device)
+                            vs.commit()
+
+                    with _get_session() as verify_bg:
+                        v_target = verify_bg.get(_ST, resolved_target_id)
+                        v_device = verify_bg.get(Device, device_id)
+                        await run_verify(verify_job.id or 0, v_device, v_target, verify_bg, runner)  # type: ignore[arg-type]
+
+                    with _get_session() as check_v:
+                        finished_v = check_v.get(_Job, verify_job.id)
+                        verify_ok = finished_v and finished_v.status == _JS.completed
+
+                    with _get_session() as final_upd:
+                        final_device = final_upd.get(Device, device_id)
+                        if final_device:
+                            final_device.stage = (
+                                DeviceStage.verified if verify_ok else DeviceStage.migrated
+                            )
+                            final_device.updated_at = datetime.utcnow()
+                            final_upd.add(final_device)
+                            final_upd.commit()
+                else:
+                    with _get_session() as err_upd:
+                        err_device = err_upd.get(Device, device_id)
+                        if err_device:
+                            err_device.stage = prev_stage
+                            err_device.updated_at = datetime.utcnow()
+                            err_upd.add(err_device)
+                            err_upd.commit()
+
         except Exception as e:
-            # Mark job failed and revert device stage
             with _get_session() as err_session:
                 err_job = err_session.get(_Job, job.id)
                 if err_job and err_job.status not in (_JS.completed, _JS.failed, _JS.cancelled):

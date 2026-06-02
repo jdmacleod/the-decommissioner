@@ -99,3 +99,38 @@ export interface Dependency {
   install_hint: string
   checked_at: string
 }
+
+export type StorageBackend = 'local' | 'sftp' | 's3'
+
+export interface StorageTarget {
+  id: number
+  name: string
+  backend: StorageBackend
+  path: string
+  restic_password_env: string
+  is_default: boolean
+  initialized: boolean
+  created_at: string
+}
+
+export interface StorageTargetCreate {
+  name: string
+  backend: StorageBackend
+  path: string
+  restic_password_env: string
+  is_default: boolean
+}
+
+export interface Snapshot {
+  id: number
+  device_id: number
+  job_id: number
+  storage_target_id: number
+  restic_snapshot_id: string
+  file_count: number
+  total_bytes: number
+  added_bytes: number
+  tags: string | null
+  taken_at: string
+  verified_at: string | null
+}

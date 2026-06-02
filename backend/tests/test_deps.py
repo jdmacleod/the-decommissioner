@@ -56,3 +56,16 @@ def test_check_dependencies_upserts(session: Session) -> None:
     names = [r.name for r in rows]
     # No duplicate names
     assert len(names) == len(set(names))
+
+
+def test_check_dependencies_version_cmd_exception(session: Session) -> None:
+    """When binary is found but version command raises, status is still 'found'."""
+    with (
+        patch("app.core.deps.shutil.which", return_value="/usr/bin/restic"),
+        patch("app.core.deps.subprocess.run", side_effect=Exception("oops")),
+    ):
+        results = check_dependencies(session)
+
+    # All should be marked found (binary exists) despite version cmd error
+    found = [r for r in results if r.status == DependencyStatus.found]
+    assert len(found) > 0

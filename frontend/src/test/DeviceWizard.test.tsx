@@ -14,6 +14,14 @@ vi.mock('../components/JobLog', () => ({
   JobLog: ({ jobId }: { jobId: number }) => <div data-testid={`job-log-${jobId}`}>JobLog</div>,
 }))
 
+vi.mock('../pages/MigrateStage', () => ({
+  MigrateStage: ({ device }: { device: { stage: string } }) => (
+    <div data-testid="migrate-stage" data-stage={device.stage}>
+      MigrateStage
+    </div>
+  ),
+}))
+
 import { getDevice, getDupStats, triggerJob } from '../lib/api'
 
 const makeDevice = (overrides = {}) => ({
@@ -81,7 +89,25 @@ describe('DeviceWizard', () => {
   it('shows migrate section as active when analyzed', async () => {
     vi.mocked(getDevice).mockResolvedValue(makeDevice({ stage: 'analyzed' }))
     renderWithProviders(<DeviceWizard />, { initialPath: '/devices/1', routePath: '/devices/:id' })
-    await waitFor(() => screen.getByText(/configure a storage target/i))
+    await waitFor(() => screen.getByTestId('migrate-stage'))
+  })
+
+  it('shows MigrateStage for migrating device', async () => {
+    vi.mocked(getDevice).mockResolvedValue(makeDevice({ stage: 'migrating' }))
+    renderWithProviders(<DeviceWizard />, { initialPath: '/devices/1', routePath: '/devices/:id' })
+    await waitFor(() => screen.getByTestId('migrate-stage'))
+  })
+
+  it('shows MigrateStage for verified device', async () => {
+    vi.mocked(getDevice).mockResolvedValue(makeDevice({ stage: 'verified' }))
+    renderWithProviders(<DeviceWizard />, { initialPath: '/devices/1', routePath: '/devices/:id' })
+    await waitFor(() => screen.getByTestId('migrate-stage'))
+  })
+
+  it('shows migrate placeholder when not yet in migrate stage', async () => {
+    vi.mocked(getDevice).mockResolvedValue(makeDevice({ stage: 'cataloged' }))
+    renderWithProviders(<DeviceWizard />, { initialPath: '/devices/1', routePath: '/devices/:id' })
+    await waitFor(() => screen.getByText(/available after duplicates/i))
   })
 
   it('shows cataloging state when device is cataloging', async () => {

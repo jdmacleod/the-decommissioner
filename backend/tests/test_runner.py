@@ -115,3 +115,32 @@ async def test_log_path_for(runner: SubprocessRunner, tmp_data_dir: Path) -> Non
     path = runner.log_path_for(42)
     assert path.name == "job_42.log"
     assert path.parent.exists()
+
+
+async def test_set_status_nonexistent_job(runner: SubprocessRunner) -> None:
+    """_set_status with an unknown job_id should return early without error."""
+    from app.models.enums import JobStatus
+
+    await runner._set_status(99999, JobStatus.completed)  # should not raise
+
+
+async def test_run_generic_exception(
+    runner: SubprocessRunner, session: Session, monkeypatch: Any
+) -> None:
+    """When create_subprocess_exec raises a non-FileNotFoundError, runner logs it."""
+    import asyncio as _asyncio
+
+    d = make_device(session)
+    j = make_job(session, d.id)
+
+    async def _fail(*args: Any, **kwargs: Any) -> Any:
+        raise RuntimeError("mock subprocess failure")
+
+    monkeypatch.setattr(_asyncio, "create_subprocess_exec", _fail)
+
+    lines = await collect(runner.run(j.id, ["echo", "never"]))
+    output = "".join(lines)
+    assert "Runner error" in output or "mock subprocess" in output
+
+    session.refresh(j)
+    assert j.status == JobStatus.failed

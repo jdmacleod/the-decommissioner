@@ -1,6 +1,7 @@
 import type {
   Device, DeviceCreate, Job, Dependency,
   FileEntryPage, DuplicateGroup, DupStats, FileStatus,
+  StorageTarget, StorageTargetCreate, Snapshot,
 } from '../types/api'
 
 const BASE = '/api'
@@ -29,10 +30,13 @@ export const deleteDevice = (id: number) =>
 
 // Jobs
 export const getJob = (id: number) => request<Job>(`/jobs/${id}`)
-export const triggerJob = (deviceId: number, jobType: string) =>
+export const triggerJob = (deviceId: number, jobType: string, storageTargetId?: number | null) =>
   request<{ job_id: number; status: string }>(`/devices/${deviceId}/jobs`, {
     method: 'POST',
-    body: JSON.stringify({ job_type: jobType }),
+    body: JSON.stringify({
+      job_type: jobType,
+      ...(storageTargetId != null ? { storage_target_id: storageTargetId } : {}),
+    }),
   })
 export const cancelJob = (id: number) =>
   request<{ job_id: number; status: string }>(`/jobs/${id}/cancel`, { method: 'POST' })
@@ -86,3 +90,18 @@ export const getDupStats = (deviceId: number): Promise<DupStats> =>
 export const getDependencies = () => request<Dependency[]>('/dependencies')
 export const recheckDependencies = () =>
   request<Dependency[]>('/dependencies/recheck', { method: 'POST' })
+
+// Storage targets
+export const getStorageTargets = () => request<StorageTarget[]>('/storage-targets')
+export const createStorageTarget = (body: StorageTargetCreate) =>
+  request<StorageTarget>('/storage-targets', { method: 'POST', body: JSON.stringify(body) })
+export const deleteStorageTarget = (id: number) =>
+  fetch(`${BASE}/storage-targets/${id}`, { method: 'DELETE' })
+export const testStorageTarget = (id: number) =>
+  request<{ ok: boolean; output: string }>(`/storage-targets/${id}/test`, { method: 'POST' })
+export const initStorageTarget = (id: number) =>
+  request<{ ok: boolean; output: string }>(`/storage-targets/${id}/init`, { method: 'POST' })
+
+// Snapshots
+export const getSnapshots = (deviceId: number) =>
+  request<Snapshot[]>(`/devices/${deviceId}/snapshots`)

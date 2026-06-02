@@ -73,6 +73,12 @@ async def test_tail_log_missing_file(session: Session, tmp_path: Path) -> None:
     assert lines == []
 
 
+def test_stream_not_found(client: TestClient) -> None:
+    """SSE stream returns 404 for unknown job."""
+    r = client.get("/api/jobs/9999/stream")
+    assert r.status_code == 404
+
+
 def test_stream_completed_job(client: TestClient, session: Session) -> None:
     from app.core.config import settings
     from app.models.enums import JobStatus

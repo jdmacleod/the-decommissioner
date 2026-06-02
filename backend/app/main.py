@@ -12,6 +12,8 @@ from app.api.devices import router as devices_router
 from app.api.duplicate_groups import router as duplicate_groups_router
 from app.api.file_entries import router as file_entries_router
 from app.api.jobs import router as jobs_router
+from app.api.snapshots import router as snapshots_router
+from app.api.storage_targets import router as storage_targets_router
 from app.core.config import settings
 from app.core.database import get_session
 from app.core.runner import SubprocessRunner
@@ -68,6 +70,8 @@ app.include_router(jobs_router, prefix="/api")
 app.include_router(dependencies_router, prefix="/api")
 app.include_router(file_entries_router, prefix="/api")
 app.include_router(duplicate_groups_router, prefix="/api")
+app.include_router(storage_targets_router, prefix="/api")
+app.include_router(snapshots_router, prefix="/api")
 
 # Serve compiled frontend from backend/app/static if it exists
 static_dir = Path(__file__).parent / "static"

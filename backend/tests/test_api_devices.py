@@ -109,3 +109,86 @@ def test_trigger_migrate_wrong_stage(client: TestClient, session: Session) -> No
     make_device(session, stage="registered")
     r = client.post("/api/devices/1/jobs", json={"job_type": "migrate"})
     assert r.status_code == 409
+
+
+def test_trigger_migrate_from_analyzed_stage(client: TestClient, session: Session) -> None:
+    """Migrate from analyzed stage hits the next_stage assignment (line 107)."""
+    from tests.conftest import make_storage_target
+
+    make_device(session, stage="analyzed", source_path="/tmp")
+    make_storage_target(session, is_default=True)
+    r = client.post(
+        "/api/devices/1/jobs",
+        json={"job_type": "migrate", "storage_target_id": 1},
+    )
+    assert r.status_code == 202
+    assert "job_id" in r.json()
+
+
+def test_background_catalog_task_runs(
+    engine: object,
+    tmp_data_dir: object,
+    monkeypatch: object,
+) -> None:
+    """Cover the _run() async task body for catalog jobs by capturing and awaiting it."""
+    import asyncio
+    import subprocess
+    from contextlib import contextmanager
+    from typing import Any
+    from unittest.mock import MagicMock, patch
+
+    from fastapi.testclient import TestClient
+    from sqlmodel import Session as _Session
+
+    import app.core.database as _db_module
+    from app.core.deps import get_db_session
+    from app.core.runner import SubprocessRunner
+    from app.main import app
+
+    @contextmanager  # type: ignore[misc]
+    def _session_factory() -> Any:
+        with _Session(engine) as s:  # type: ignore[arg-type]
+            yield s
+
+    def _override_session() -> Any:
+        with _Session(engine) as s:  # type: ignore[arg-type]
+            yield s
+
+    monkeypatch.setattr(_db_module, "engine", engine)  # type: ignore[misc]
+    monkeypatch.setattr(_db_module, "get_session", _session_factory)  # type: ignore[misc]
+    app.dependency_overrides[get_db_session] = _override_session
+    app.state.runner = SubprocessRunner(_session_factory)
+
+    with _Session(engine) as s:  # type: ignore[arg-type]
+        from tests.conftest import make_device as _make_device
+
+        _make_device(s, source_path="/tmp/src")
+
+    captured_coros: list[Any] = []
+
+    def fake_create_task(coro: Any) -> Any:
+        captured_coros.append(coro)
+        return MagicMock()
+
+    ok = MagicMock(spec=subprocess.CompletedProcess)
+    ok.returncode = 0
+    ok.stderr = ""
+
+    async def _noop_catalog(job_id: int, device: Any, session: Any, runner: Any) -> None:
+        pass
+
+    try:
+        with (
+            patch("app.main.subprocess.run", return_value=ok),
+            patch("app.core.deps.check_dependencies", MagicMock(return_value=[])),
+            patch("app.api.devices.asyncio.create_task", fake_create_task),
+            TestClient(app, raise_server_exceptions=True) as c,
+        ):
+            r = c.post("/api/devices/1/jobs", json={"job_type": "catalog"})
+            assert r.status_code == 202
+
+        assert len(captured_coros) == 1
+        with patch("app.engines.catalog.run_catalog", _noop_catalog):
+            asyncio.run(captured_coros[0])
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)

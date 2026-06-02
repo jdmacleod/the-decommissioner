@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getDevice, triggerJob, getDupStats } from '../lib/api'
 import { StageProgress } from '../components/StageProgress'
 import { JobLog } from '../components/JobLog'
+import { MigrateStage } from './MigrateStage'
 import type { DeviceStage } from '../types/api'
 
 const CATALOG_STAGES: DeviceStage[] = ['registered', 'cataloged']
@@ -41,7 +42,6 @@ export function DeviceWizard() {
   const canCatalog = CATALOG_STAGES.includes(device.stage)
   const isCataloging = device.stage === 'cataloging'
   const postCatalog = ['cataloged', 'analyzing', 'analyzed'].includes(device.stage)
-  const isAnalyzed = device.stage === 'analyzed'
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
@@ -128,20 +128,30 @@ export function DeviceWizard() {
         )}
       </div>
 
-      {/* Migrate (placeholder) */}
-      <div className={`border rounded-lg p-5 mt-4 ${isAnalyzed ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100 opacity-50'}`}>
-        <h3 className={`font-semibold ${isAnalyzed ? 'text-gray-800' : 'text-gray-400'}`}>
-          Step 2 — Migrate to Storage
-        </h3>
-        {isAnalyzed ? (
-          <div className="text-sm text-gray-500 mt-1">Ready — configure a storage target in Settings, then start migration.</div>
-        ) : (
-          <div className="text-xs text-gray-400 mt-1">Available after duplicates are resolved</div>
-        )}
-      </div>
+      {/* Migrate + Verify Stage */}
+      {(() => {
+        const migrateActive = [
+          'analyzed', 'migrating', 'migrated', 'verifying', 'verified',
+          'wiping', 'wiped', 'recycled',
+        ].includes(device.stage)
+        return (
+          <div
+            className={`border rounded-lg p-5 mt-4 ${migrateActive ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100 opacity-50'}`}
+          >
+            {migrateActive ? (
+              <MigrateStage device={device} deviceId={deviceId} />
+            ) : (
+              <>
+                <h3 className="font-semibold text-gray-400">Step 2 — Migrate to Storage</h3>
+                <div className="text-xs text-gray-400 mt-1">Available after duplicates are resolved</div>
+              </>
+            )}
+          </div>
+        )
+      })()}
 
-      {/* Verify / Wipe / Recycle placeholders */}
-      {['Step 3 — Verify', 'Step 4 — Wipe', 'Step 5 — Recycle'].map((label) => (
+      {/* Wipe / Recycle placeholders */}
+      {['Step 3 — Wipe', 'Step 4 — Recycle'].map((label) => (
         <div key={label} className="bg-gray-50 border border-gray-100 rounded-lg p-5 mt-4 opacity-40">
           <h3 className="font-semibold text-gray-400">{label}</h3>
           <div className="text-xs text-gray-400 mt-1">Available after previous stage completes</div>

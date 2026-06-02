@@ -26,6 +26,14 @@ class StorageTargetCreate(SQLModel):
     is_default: bool = False
 
 
+class StorageTargetUpdate(SQLModel):
+    name: str | None = None
+    backend: StorageBackend | None = None
+    path: str | None = None
+    restic_password_env: str | None = None
+    is_default: bool | None = None
+
+
 class StorageTargetRead(SQLModel):
     id: int
     name: str

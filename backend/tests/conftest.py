@@ -155,3 +155,45 @@ def make_job(session: Session, device_id: int, **kwargs: Any) -> Any:
     session.commit()
     session.refresh(job)
     return job
+
+
+def make_storage_target(session: Session, **kwargs: Any) -> Any:
+    from app.models.enums import StorageBackend
+    from app.models.storage_target import StorageTarget
+
+    target = StorageTarget(
+        name=kwargs.get("name", "Test Repo"),
+        backend=kwargs.get("backend", StorageBackend.local),
+        path=kwargs.get("path", "/tmp/restic-repo"),
+        restic_password_env=kwargs.get("restic_password_env", "RESTIC_PASSWORD"),
+        is_default=kwargs.get("is_default", False),
+        initialized=kwargs.get("initialized", False),
+    )
+    session.add(target)
+    session.commit()
+    session.refresh(target)
+    return target
+
+
+def make_snapshot(
+    session: Session, device_id: int, job_id: int, target_id: int, **kwargs: Any
+) -> Any:
+    from datetime import datetime
+
+    from app.models.snapshot import Snapshot
+
+    snap = Snapshot(
+        device_id=device_id,
+        job_id=job_id,
+        storage_target_id=target_id,
+        restic_snapshot_id=kwargs.get("restic_snapshot_id", "abc12345"),
+        file_count=kwargs.get("file_count", 100),
+        total_bytes=kwargs.get("total_bytes", 1024 * 1024),
+        added_bytes=kwargs.get("added_bytes", 512 * 1024),
+        tags='["device-1", "hard_drive", "the-decommissioner"]',
+        taken_at=kwargs.get("taken_at", datetime.utcnow()),
+    )
+    session.add(snap)
+    session.commit()
+    session.refresh(snap)
+    return snap

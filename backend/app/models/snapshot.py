@@ -23,3 +23,17 @@ class Snapshot(SQLModel, table=True):
 
     device: Optional["Device"] = Relationship(back_populates="snapshots")
     job: Optional["Job"] = Relationship(back_populates="snapshot")
+
+
+class SnapshotRead(SQLModel):
+    id: int
+    device_id: int
+    job_id: int
+    storage_target_id: int
+    restic_snapshot_id: str
+    file_count: int
+    total_bytes: int
+    added_bytes: int
+    tags: str | None
+    taken_at: datetime
+    verified_at: datetime | None
