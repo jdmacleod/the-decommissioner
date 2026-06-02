@@ -79,6 +79,53 @@ def test_stream_not_found(client: TestClient) -> None:
     assert r.status_code == 404
 
 
+def test_update_checklist_ok(client: TestClient, session: Session) -> None:
+    import json
+
+    from app.models.enums import JobStatus, JobType
+
+    d = make_device(session)
+    j = make_job(session, d.id, job_type=JobType.wipe, status=JobStatus.completed)
+    # Seed checklist metadata
+    j.job_metadata = json.dumps(
+        {"method": "apple_checklist", "checklist_items": [{"label": "Step 1", "done": False}]}
+    )
+    session.add(j)
+    session.commit()
+
+    r = client.patch(f"/api/jobs/{j.id}/checklist", json={"index": 0, "done": True})
+    assert r.status_code == 200
+    meta = json.loads(r.json()["job_metadata"])
+    assert meta["checklist_items"][0]["done"] is True
+
+
+def test_update_checklist_invalid_index(client: TestClient, session: Session) -> None:
+    import json
+
+    from app.models.enums import JobType
+
+    d = make_device(session)
+    j = make_job(session, d.id, job_type=JobType.wipe)
+    j.job_metadata = json.dumps({"checklist_items": [{"label": "Step 1", "done": False}]})
+    session.add(j)
+    session.commit()
+
+    r = client.patch(f"/api/jobs/{j.id}/checklist", json={"index": 99, "done": True})
+    assert r.status_code == 400
+
+
+def test_update_checklist_no_metadata(client: TestClient, session: Session) -> None:
+    d = make_device(session)
+    j = make_job(session, d.id)
+    r = client.patch(f"/api/jobs/{j.id}/checklist", json={"index": 0, "done": True})
+    assert r.status_code == 400
+
+
+def test_update_checklist_not_found(client: TestClient) -> None:
+    r = client.patch("/api/jobs/999/checklist", json={"index": 0, "done": True})
+    assert r.status_code == 404
+
+
 def test_stream_completed_job(client: TestClient, session: Session) -> None:
     from app.core.config import settings
     from app.models.enums import JobStatus

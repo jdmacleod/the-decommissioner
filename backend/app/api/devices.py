@@ -209,6 +209,37 @@ async def trigger_job(
                             err_upd.add(err_device)
                             err_upd.commit()
 
+            elif job_type == JobType.wipe:
+                from app.engines.wipe import APPLE_DEVICE_TYPES as _APPLE_TYPES
+                from app.engines.wipe import run_wipe
+
+                with _get_session() as bg_session:
+                    bg_device = bg_session.get(Device, device_id)
+                    await run_wipe(job.id or 0, bg_device, bg_session, runner)
+
+                with _get_session() as check_session:
+                    finished_job = check_session.get(_Job, job.id)
+                    wipe_ok = finished_job and finished_job.status == _JS.completed
+
+                if wipe_ok:
+                    # Apple devices: stay in wiping — user must click "Mark as Wiped"
+                    # Hardware devices: advance to wiped automatically
+                    with _get_session() as upd_session:
+                        upd_device = upd_session.get(Device, device_id)
+                        if upd_device and upd_device.device_type not in _APPLE_TYPES:
+                            upd_device.stage = DeviceStage.wiped
+                            upd_device.updated_at = datetime.utcnow()
+                            upd_session.add(upd_device)
+                            upd_session.commit()
+                else:
+                    with _get_session() as err_upd:
+                        err_device = err_upd.get(Device, device_id)
+                        if err_device:
+                            err_device.stage = prev_stage
+                            err_device.updated_at = datetime.utcnow()
+                            err_upd.add(err_device)
+                            err_upd.commit()
+
         except Exception as e:
             with _get_session() as err_session:
                 err_job = err_session.get(_Job, job.id)
@@ -227,3 +258,53 @@ async def trigger_job(
     asyncio.create_task(_run())
 
     return {"job_id": job.id, "status": job.status}
+
+
+@router.get("/{device_id}/jobs", response_model=list)
+def list_device_jobs(device_id: int, session: SessionDep) -> list:
+    from app.models.job import Job
+
+    device = session.get(Device, device_id)
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    return list(
+        session.exec(
+            select(Job).where(Job.device_id == device_id).order_by(Job.created_at.desc())  # type: ignore[attr-defined]
+        ).all()
+    )
+
+
+@router.post("/{device_id}/mark-wiped", response_model=DeviceRead)
+def mark_wiped(device_id: int, session: SessionDep) -> Device:
+    device = session.get(Device, device_id)
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    if device.stage != DeviceStage.wiping:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Device is in stage '{device.stage}', not 'wiping'",
+        )
+    device.stage = DeviceStage.wiped
+    device.updated_at = datetime.utcnow()
+    session.add(device)
+    session.commit()
+    session.refresh(device)
+    return device
+
+
+@router.post("/{device_id}/mark-recycled", response_model=DeviceRead)
+def mark_recycled(device_id: int, session: SessionDep) -> Device:
+    device = session.get(Device, device_id)
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    if device.stage != DeviceStage.wiped:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Device is in stage '{device.stage}', not 'wiped'",
+        )
+    device.stage = DeviceStage.recycled
+    device.updated_at = datetime.utcnow()
+    session.add(device)
+    session.commit()
+    session.refresh(device)
+    return device

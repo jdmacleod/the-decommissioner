@@ -105,3 +105,22 @@ export const initStorageTarget = (id: number) =>
 // Snapshots
 export const getSnapshots = (deviceId: number) =>
   request<Snapshot[]>(`/devices/${deviceId}/snapshots`)
+
+// Device jobs
+export const getDeviceJobs = (deviceId: number) =>
+  request<Job[]>(`/devices/${deviceId}/jobs`)
+
+// Wipe/recycle lifecycle
+export const updateChecklist = (jobId: number, index: number, done: boolean) =>
+  request<Job>(`/jobs/${jobId}/checklist`, {
+    method: 'PATCH',
+    body: JSON.stringify({ index, done }),
+  })
+
+export const markWiped = (deviceId: number) =>
+  request<Device>(`/devices/${deviceId}/mark-wiped`, { method: 'POST' })
+
+export const markRecycled = (deviceId: number) =>
+  request<Device>(`/devices/${deviceId}/mark-recycled`, { method: 'POST' })
+
+export const getCertificateUrl = (deviceId: number) => `${BASE}/devices/${deviceId}/certificate`

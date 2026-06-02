@@ -125,6 +125,68 @@ def test_trigger_migrate_from_analyzed_stage(client: TestClient, session: Sessio
     assert "job_id" in r.json()
 
 
+def test_trigger_wipe_from_verified(client: TestClient, session: Session) -> None:
+    make_device(session, stage="verified", source_path="/tmp")
+    r = client.post("/api/devices/1/jobs", json={"job_type": "wipe"})
+    assert r.status_code == 202
+    assert "job_id" in r.json()
+
+
+def test_trigger_wipe_wrong_stage(client: TestClient, session: Session) -> None:
+    make_device(session, stage="registered")
+    r = client.post("/api/devices/1/jobs", json={"job_type": "wipe"})
+    assert r.status_code == 409
+
+
+def test_mark_wiped_ok(client: TestClient, session: Session) -> None:
+    make_device(session, stage="wiping")
+    r = client.post("/api/devices/1/mark-wiped")
+    assert r.status_code == 200
+    assert r.json()["stage"] == "wiped"
+
+
+def test_mark_wiped_wrong_stage(client: TestClient, session: Session) -> None:
+    make_device(session, stage="verified")
+    r = client.post("/api/devices/1/mark-wiped")
+    assert r.status_code == 409
+
+
+def test_mark_wiped_not_found(client: TestClient) -> None:
+    assert client.post("/api/devices/99/mark-wiped").status_code == 404
+
+
+def test_mark_recycled_ok(client: TestClient, session: Session) -> None:
+    make_device(session, stage="wiped")
+    r = client.post("/api/devices/1/mark-recycled")
+    assert r.status_code == 200
+    assert r.json()["stage"] == "recycled"
+
+
+def test_mark_recycled_wrong_stage(client: TestClient, session: Session) -> None:
+    make_device(session, stage="wiping")
+    r = client.post("/api/devices/1/mark-recycled")
+    assert r.status_code == 409
+
+
+def test_mark_recycled_not_found(client: TestClient) -> None:
+    assert client.post("/api/devices/99/mark-recycled").status_code == 404
+
+
+def test_list_device_jobs(client: TestClient, session: Session) -> None:
+    from tests.conftest import make_job
+
+    d = make_device(session)
+    make_job(session, d.id)
+    make_job(session, d.id)
+    r = client.get(f"/api/devices/{d.id}/jobs")
+    assert r.status_code == 200
+    assert len(r.json()) == 2
+
+
+def test_list_device_jobs_not_found(client: TestClient) -> None:
+    assert client.get("/api/devices/99/jobs").status_code == 404
+
+
 def test_background_catalog_task_runs(
     engine: object,
     tmp_data_dir: object,
@@ -190,5 +252,174 @@ def test_background_catalog_task_runs(
         assert len(captured_coros) == 1
         with patch("app.engines.catalog.run_catalog", _noop_catalog):
             asyncio.run(captured_coros[0])
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)
+
+
+def test_background_wipe_task_hdd(
+    engine: object,
+    tmp_data_dir: object,
+    monkeypatch: object,
+) -> None:
+    """Cover the _run() wipe branch for HDD devices (advances to wiped)."""
+    import asyncio
+    import subprocess
+    from contextlib import contextmanager
+    from typing import Any
+    from unittest.mock import MagicMock, patch
+
+    from fastapi.testclient import TestClient
+    from sqlmodel import Session as _Session
+
+    import app.core.database as _db_module
+    from app.core.deps import get_db_session
+    from app.core.runner import SubprocessRunner
+    from app.main import app
+
+    @contextmanager  # type: ignore[misc]
+    def _session_factory() -> Any:
+        with _Session(engine) as s:  # type: ignore[arg-type]
+            yield s
+
+    def _override_session() -> Any:
+        with _Session(engine) as s:  # type: ignore[arg-type]
+            yield s
+
+    monkeypatch.setattr(_db_module, "engine", engine)  # type: ignore[misc]
+    monkeypatch.setattr(_db_module, "get_session", _session_factory)  # type: ignore[misc]
+    app.dependency_overrides[get_db_session] = _override_session
+    app.state.runner = SubprocessRunner(_session_factory)
+
+    with _Session(engine) as s:  # type: ignore[arg-type]
+        from tests.conftest import make_device as _make_device
+
+        _make_device(s, device_type="hard_drive", stage="verified", source_path="/tmp/drive")
+
+    captured_coros: list[Any] = []
+
+    def fake_create_task(coro: Any) -> Any:
+        captured_coros.append(coro)
+        return MagicMock()
+
+    ok = MagicMock(spec=subprocess.CompletedProcess)
+    ok.returncode = 0
+    ok.stderr = ""
+
+    async def _noop_wipe(job_id: int, device: Any, session: Any, runner: Any) -> None:
+        from app.models.enums import JobStatus
+        from app.models.job import Job
+
+        with _session_factory() as sess:
+            j = sess.get(Job, job_id)
+            if j:
+                j.status = JobStatus.completed
+                sess.add(j)
+                sess.commit()
+
+    try:
+        with (
+            patch("app.main.subprocess.run", return_value=ok),
+            patch("app.core.deps.check_dependencies", MagicMock(return_value=[])),
+            patch("app.api.devices.asyncio.create_task", fake_create_task),
+            TestClient(app, raise_server_exceptions=True) as c,
+        ):
+            r = c.post("/api/devices/1/jobs", json={"job_type": "wipe"})
+            assert r.status_code == 202
+
+        assert len(captured_coros) == 1
+        with patch("app.engines.wipe.run_wipe", _noop_wipe):
+            asyncio.run(captured_coros[0])
+
+        with _Session(engine) as s:  # type: ignore[arg-type]
+            from app.models.device import Device
+
+            d = s.get(Device, 1)
+            assert d is not None
+            assert d.stage.value == "wiped"
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)
+
+
+def test_background_wipe_task_apple(
+    engine: object,
+    tmp_data_dir: object,
+    monkeypatch: object,
+) -> None:
+    """Cover the _run() wipe branch for Apple devices (stays in wiping)."""
+    import asyncio
+    import subprocess
+    from contextlib import contextmanager
+    from typing import Any
+    from unittest.mock import MagicMock, patch
+
+    from fastapi.testclient import TestClient
+    from sqlmodel import Session as _Session
+
+    import app.core.database as _db_module
+    from app.core.deps import get_db_session
+    from app.core.runner import SubprocessRunner
+    from app.main import app
+
+    @contextmanager  # type: ignore[misc]
+    def _session_factory() -> Any:
+        with _Session(engine) as s:  # type: ignore[arg-type]
+            yield s
+
+    def _override_session() -> Any:
+        with _Session(engine) as s:  # type: ignore[arg-type]
+            yield s
+
+    monkeypatch.setattr(_db_module, "engine", engine)  # type: ignore[misc]
+    monkeypatch.setattr(_db_module, "get_session", _session_factory)  # type: ignore[misc]
+    app.dependency_overrides[get_db_session] = _override_session
+    app.state.runner = SubprocessRunner(_session_factory)
+
+    with _Session(engine) as s:  # type: ignore[arg-type]
+        from tests.conftest import make_device as _make_device
+
+        _make_device(s, device_type="iphone", stage="verified", source_path=None)
+
+    captured_coros: list[Any] = []
+
+    def fake_create_task(coro: Any) -> Any:
+        captured_coros.append(coro)
+        return MagicMock()
+
+    ok = MagicMock(spec=subprocess.CompletedProcess)
+    ok.returncode = 0
+    ok.stderr = ""
+
+    async def _noop_wipe(job_id: int, device: Any, session: Any, runner: Any) -> None:
+        from app.models.enums import JobStatus
+        from app.models.job import Job
+
+        with _session_factory() as sess:
+            j = sess.get(Job, job_id)
+            if j:
+                j.status = JobStatus.completed
+                sess.add(j)
+                sess.commit()
+
+    try:
+        with (
+            patch("app.main.subprocess.run", return_value=ok),
+            patch("app.core.deps.check_dependencies", MagicMock(return_value=[])),
+            patch("app.api.devices.asyncio.create_task", fake_create_task),
+            TestClient(app, raise_server_exceptions=True) as c,
+        ):
+            r = c.post("/api/devices/1/jobs", json={"job_type": "wipe"})
+            assert r.status_code == 202
+
+        assert len(captured_coros) == 1
+        with patch("app.engines.wipe.run_wipe", _noop_wipe):
+            asyncio.run(captured_coros[0])
+
+        with _Session(engine) as s:  # type: ignore[arg-type]
+            from app.models.device import Device
+
+            d = s.get(Device, 1)
+            assert d is not None
+            # Apple device stays in wiping — user must click Mark as Wiped
+            assert d.stage.value == "wiping"
     finally:
         app.dependency_overrides.pop(get_db_session, None)

@@ -121,6 +121,17 @@ export interface StorageTargetCreate {
   is_default: boolean
 }
 
+export interface ChecklistItem {
+  label: string
+  done: boolean
+}
+
+export interface WipeJobMetadata {
+  method?: string
+  checklist_items?: ChecklistItem[]
+  block_device?: string
+}
+
 export interface Snapshot {
   id: number
   device_id: number

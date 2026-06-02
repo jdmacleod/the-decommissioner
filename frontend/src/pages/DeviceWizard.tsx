@@ -5,6 +5,8 @@ import { getDevice, triggerJob, getDupStats } from '../lib/api'
 import { StageProgress } from '../components/StageProgress'
 import { JobLog } from '../components/JobLog'
 import { MigrateStage } from './MigrateStage'
+import { WipeStage } from './WipeStage'
+import { RecycleStage } from './RecycleStage'
 import type { DeviceStage } from '../types/api'
 
 const CATALOG_STAGES: DeviceStage[] = ['registered', 'cataloged']
@@ -150,13 +152,43 @@ export function DeviceWizard() {
         )
       })()}
 
-      {/* Wipe / Recycle placeholders */}
-      {['Step 3 — Wipe', 'Step 4 — Recycle'].map((label) => (
-        <div key={label} className="bg-gray-50 border border-gray-100 rounded-lg p-5 mt-4 opacity-40">
-          <h3 className="font-semibold text-gray-400">{label}</h3>
-          <div className="text-xs text-gray-400 mt-1">Available after previous stage completes</div>
-        </div>
-      ))}
+      {/* Wipe Stage */}
+      {(() => {
+        const wipeActive = ['verified', 'wiping', 'wiped', 'recycled'].includes(device.stage)
+        return (
+          <div
+            className={`border rounded-lg p-5 mt-4 ${wipeActive ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100 opacity-50'}`}
+          >
+            {wipeActive ? (
+              <WipeStage device={device} deviceId={deviceId} />
+            ) : (
+              <>
+                <h3 className="font-semibold text-gray-400">Step 3 — Wipe</h3>
+                <div className="text-xs text-gray-400 mt-1">Available after previous stage completes</div>
+              </>
+            )}
+          </div>
+        )
+      })()}
+
+      {/* Recycle Stage */}
+      {(() => {
+        const recycleActive = ['wiped', 'recycled'].includes(device.stage)
+        return (
+          <div
+            className={`border rounded-lg p-5 mt-4 ${recycleActive ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100 opacity-50'}`}
+          >
+            {recycleActive ? (
+              <RecycleStage device={device} deviceId={deviceId} />
+            ) : (
+              <>
+                <h3 className="font-semibold text-gray-400">Step 4 — Recycle</h3>
+                <div className="text-xs text-gray-400 mt-1">Available after previous stage completes</div>
+              </>
+            )}
+          </div>
+        )
+      })()}
     </div>
   )
 }

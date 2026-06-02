@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from app.api.certificates import router as certificates_router
 from app.api.dependencies import router as dependencies_router
 from app.api.devices import router as devices_router
 from app.api.duplicate_groups import router as duplicate_groups_router
@@ -72,6 +73,7 @@ app.include_router(file_entries_router, prefix="/api")
 app.include_router(duplicate_groups_router, prefix="/api")
 app.include_router(storage_targets_router, prefix="/api")
 app.include_router(snapshots_router, prefix="/api")
+app.include_router(certificates_router, prefix="/api")
 
 # Serve compiled frontend from backend/app/static if it exists
 static_dir = Path(__file__).parent / "static"

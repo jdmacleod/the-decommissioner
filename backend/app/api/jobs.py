@@ -1,9 +1,11 @@
 import asyncio
+import json
 from pathlib import Path
 
 import aiofiles
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
 from app.core.deps import SessionDep, get_runner
 from app.models.enums import JobStatus
@@ -60,6 +62,29 @@ async def cancel_job(job_id: int, request: Request, session: SessionDep):
     runner = get_runner(request)
     await runner.cancel(job_id)
     return {"job_id": job_id, "status": "cancellation_requested"}
+
+
+class ChecklistItemUpdate(BaseModel):
+    index: int
+    done: bool
+
+
+@router.patch("/{job_id}/checklist", response_model=JobRead)
+def update_checklist(job_id: int, body: ChecklistItemUpdate, session: SessionDep) -> Job:
+    job = session.get(Job, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    metadata = json.loads(job.job_metadata or "{}")
+    items: list[dict] = metadata.get("checklist_items", [])
+    if body.index < 0 or body.index >= len(items):
+        raise HTTPException(status_code=400, detail="Invalid checklist index")
+    items[body.index]["done"] = body.done
+    metadata["checklist_items"] = items
+    job.job_metadata = json.dumps(metadata)
+    session.add(job)
+    session.commit()
+    session.refresh(job)
+    return job
 
 
 async def _tail_log(log_path: Path, job_id: int, session):

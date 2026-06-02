@@ -22,6 +22,22 @@ vi.mock('../pages/MigrateStage', () => ({
   ),
 }))
 
+vi.mock('../pages/WipeStage', () => ({
+  WipeStage: ({ device }: { device: { stage: string } }) => (
+    <div data-testid="wipe-stage" data-stage={device.stage}>
+      WipeStage
+    </div>
+  ),
+}))
+
+vi.mock('../pages/RecycleStage', () => ({
+  RecycleStage: ({ device }: { device: { stage: string } }) => (
+    <div data-testid="recycle-stage" data-stage={device.stage}>
+      RecycleStage
+    </div>
+  ),
+}))
+
 import { getDevice, getDupStats, triggerJob } from '../lib/api'
 
 const makeDevice = (overrides = {}) => ({
@@ -114,5 +130,41 @@ describe('DeviceWizard', () => {
     vi.mocked(getDevice).mockResolvedValue(makeDevice({ stage: 'cataloging' }))
     renderWithProviders(<DeviceWizard />, { initialPath: '/devices/1', routePath: '/devices/:id' })
     await waitFor(() => screen.getByText(/Starting catalog job/i))
+  })
+
+  it('shows WipeStage for verified device', async () => {
+    vi.mocked(getDevice).mockResolvedValue(makeDevice({ stage: 'verified' }))
+    renderWithProviders(<DeviceWizard />, { initialPath: '/devices/1', routePath: '/devices/:id' })
+    await waitFor(() => screen.getByTestId('wipe-stage'))
+  })
+
+  it('shows WipeStage for wiping device', async () => {
+    vi.mocked(getDevice).mockResolvedValue(makeDevice({ stage: 'wiping' }))
+    renderWithProviders(<DeviceWizard />, { initialPath: '/devices/1', routePath: '/devices/:id' })
+    await waitFor(() => screen.getByTestId('wipe-stage'))
+  })
+
+  it('shows RecycleStage for wiped device', async () => {
+    vi.mocked(getDevice).mockResolvedValue(makeDevice({ stage: 'wiped' }))
+    renderWithProviders(<DeviceWizard />, { initialPath: '/devices/1', routePath: '/devices/:id' })
+    await waitFor(() => screen.getByTestId('recycle-stage'))
+  })
+
+  it('shows RecycleStage for recycled device', async () => {
+    vi.mocked(getDevice).mockResolvedValue(makeDevice({ stage: 'recycled' }))
+    renderWithProviders(<DeviceWizard />, { initialPath: '/devices/1', routePath: '/devices/:id' })
+    await waitFor(() => screen.getByTestId('recycle-stage'))
+  })
+
+  it('shows wipe placeholder when not yet in wipe stage', async () => {
+    vi.mocked(getDevice).mockResolvedValue(makeDevice({ stage: 'cataloged' }))
+    renderWithProviders(<DeviceWizard />, { initialPath: '/devices/1', routePath: '/devices/:id' })
+    await waitFor(() => screen.getByText(/Step 3 — Wipe/))
+  })
+
+  it('shows recycle placeholder when not yet in recycle stage', async () => {
+    vi.mocked(getDevice).mockResolvedValue(makeDevice({ stage: 'cataloged' }))
+    renderWithProviders(<DeviceWizard />, { initialPath: '/devices/1', routePath: '/devices/:id' })
+    await waitFor(() => screen.getByText(/Step 4 — Recycle/))
   })
 })
