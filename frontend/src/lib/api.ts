@@ -1,7 +1,7 @@
 import type {
   Device, DeviceCreate, Job, Dependency,
   FileEntryPage, DuplicateGroup, DupStats, FileStatus,
-  StorageTarget, StorageTargetCreate, Snapshot,
+  StorageTarget, StorageTargetCreate, Snapshot, IosDetectResult,
 } from '../types/api'
 
 const BASE = '/api'
@@ -21,6 +21,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 // Devices
 export const getDevices = () => request<Device[]>('/devices')
 export const getDevice = (id: number) => request<Device>(`/devices/${id}`)
+export const detectIos = () => request<IosDetectResult>('/devices/detect-ios')
 export const createDevice = (body: DeviceCreate) =>
   request<Device>('/devices', { method: 'POST', body: JSON.stringify(body) })
 export const updateDevice = (id: number, body: Partial<Device>) =>

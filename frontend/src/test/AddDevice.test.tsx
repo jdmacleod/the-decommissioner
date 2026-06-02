@@ -6,9 +6,10 @@ import { renderWithProviders } from './helpers'
 
 vi.mock('../lib/api', () => ({
   createDevice: vi.fn(),
+  detectIos: vi.fn(),
 }))
 
-import { createDevice } from '../lib/api'
+import { createDevice, detectIos } from '../lib/api'
 
 const newDevice = {
   id: 1, name: 'My Drive', device_type: 'hard_drive' as const, stage: 'registered' as const,
@@ -18,6 +19,7 @@ const newDevice = {
 
 beforeEach(() => {
   vi.mocked(createDevice).mockResolvedValue(newDevice)
+  vi.mocked(detectIos).mockResolvedValue({ available: true, name: "Jason's iPhone", serial: 'ABC123' })
 })
 
 describe('AddDevice form', () => {
@@ -81,5 +83,62 @@ describe('AddDevice form', () => {
     renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
     await userEvent.click(screen.getByRole('button', { name: /cancel/i }))
     await waitFor(() => expect(screen.getByTestId('navigated')).toBeInTheDocument())
+  })
+
+  it('does not show Detect button for non-iOS device types', () => {
+    renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
+    expect(screen.queryByRole('button', { name: /detect/i })).not.toBeInTheDocument()
+  })
+
+  it('shows Detect button when iPhone is selected', async () => {
+    renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'iphone')
+    expect(screen.getByRole('button', { name: /detect/i })).toBeInTheDocument()
+  })
+
+  it('shows Detect button for iPad', async () => {
+    renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'ipad')
+    expect(screen.getByRole('button', { name: /detect/i })).toBeInTheDocument()
+  })
+
+  it('calls detectIos on Detect click and fills name field', async () => {
+    renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'iphone')
+    await userEvent.click(screen.getByRole('button', { name: /detect/i }))
+    await waitFor(() => expect(detectIos).toHaveBeenCalled())
+    await waitFor(() => {
+      const nameInput = screen.getByPlaceholderText(/Jason's 2019 MBP/i)
+      expect(nameInput).toHaveValue("Jason's iPhone")
+    })
+  })
+
+  it('shows error when no device detected', async () => {
+    vi.mocked(detectIos).mockResolvedValue({ available: false, name: null, serial: null })
+    renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'iphone')
+    await userEvent.click(screen.getByRole('button', { name: /detect/i }))
+    await waitFor(() => screen.getByText(/No iOS device detected/i))
+  })
+
+  it('shows error when detectIos throws', async () => {
+    vi.mocked(detectIos).mockRejectedValue(new Error('ideviceinfo missing'))
+    renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'iphone')
+    await userEvent.click(screen.getByRole('button', { name: /detect/i }))
+    await waitFor(() => screen.getByText(/Detection failed/i))
+  })
+
+  it('shows success badge after detection', async () => {
+    renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'iphone')
+    await userEvent.click(screen.getByRole('button', { name: /detect/i }))
+    await waitFor(() => screen.getByText(/Device detected/i))
+  })
+
+  it('hides source path field for iOS devices', async () => {
+    renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'iphone')
+    expect(screen.queryByPlaceholderText('/Volumes/MyDrive')).not.toBeInTheDocument()
   })
 })

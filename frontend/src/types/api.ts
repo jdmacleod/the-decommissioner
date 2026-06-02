@@ -121,6 +121,12 @@ export interface StorageTargetCreate {
   is_default: boolean
 }
 
+export interface IosDetectResult {
+  available: boolean
+  name: string | null
+  serial: string | null
+}
+
 export interface ChecklistItem {
   label: string
   done: boolean

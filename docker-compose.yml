@@ -1,0 +1,39 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - decommissioner_data:/data
+    environment:
+      DATA_DIR: /data
+      HOST: 0.0.0.0
+      PORT: "8000"
+      LOG_LEVEL: info
+      # Set RESTIC_PASSWORD in your shell before running docker-compose up,
+      # or create a .env file with RESTIC_PASSWORD=your-secret.
+      # The value is never stored in the database — only the variable name is.
+      RESTIC_PASSWORD: ${RESTIC_PASSWORD:-}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/dependencies')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    image: nginx:alpine
+    ports:
+      - "3000:80"
+    volumes:
+      - ./frontend/dist:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  decommissioner_data:

@@ -39,6 +39,13 @@ def create_device(body: DeviceCreate, session: SessionDep):
     return device
 
 
+@router.get("/detect-ios")
+def detect_ios() -> dict:
+    from app.engines.ios import detect_ios_device
+
+    return detect_ios_device()
+
+
 @router.get("/{device_id}", response_model=DeviceRead)
 def get_device(device_id: int, session: SessionDep):
     device = session.get(Device, device_id)
@@ -138,6 +145,56 @@ async def trigger_job(
                         upd_device.updated_at = datetime.utcnow()
                         upd_session.add(upd_device)
                         upd_session.commit()
+
+            elif job_type == JobType.ios_extract:
+                from app.engines.catalog import run_catalog as _run_catalog
+                from app.engines.ios import run_ios_extract
+
+                with _get_session() as bg_session:
+                    bg_device = bg_session.get(Device, device_id)
+                    await run_ios_extract(job.id or 0, bg_device, bg_session, runner)
+
+                with _get_session() as check_session:
+                    finished_job = check_session.get(_Job, job.id)
+                    extract_ok = finished_job and finished_job.status == _JS.completed
+
+                if extract_ok:
+                    # Auto-run catalog using the staging_path now set on the device
+                    catalog_job = None
+                    with _get_session() as cat_session:
+                        cat_device = cat_session.get(Device, device_id)
+                        catalog_job = create_job(cat_session, device_id, JobType.catalog)
+                        if cat_device:
+                            cat_device.stage = DeviceStage.cataloging
+                            cat_device.updated_at = datetime.utcnow()
+                            cat_session.add(cat_device)
+                            cat_session.commit()
+
+                    with _get_session() as cat_bg:
+                        cat_device = cat_bg.get(Device, device_id)
+                        await _run_catalog(catalog_job.id or 0, cat_device, cat_bg, runner)
+
+                    with _get_session() as check_cat:
+                        finished_cat = check_cat.get(_Job, catalog_job.id)
+                        catalog_ok = finished_cat and finished_cat.status == _JS.completed
+
+                    with _get_session() as final:
+                        final_device = final.get(Device, device_id)
+                        if final_device:
+                            final_device.stage = (
+                                DeviceStage.cataloged if catalog_ok else DeviceStage.registered
+                            )
+                            final_device.updated_at = datetime.utcnow()
+                            final.add(final_device)
+                            final.commit()
+                else:
+                    with _get_session() as err_upd:
+                        err_device = err_upd.get(Device, device_id)
+                        if err_device:
+                            err_device.stage = prev_stage
+                            err_device.updated_at = datetime.utcnow()
+                            err_upd.add(err_device)
+                            err_upd.commit()
 
             elif job_type == JobType.migrate:
                 from app.engines.migrate import run_migrate

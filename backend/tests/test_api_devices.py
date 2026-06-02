@@ -125,6 +125,50 @@ def test_trigger_migrate_from_analyzed_stage(client: TestClient, session: Sessio
     assert "job_id" in r.json()
 
 
+def test_detect_ios_available(client: TestClient) -> None:
+    import subprocess
+    from unittest.mock import MagicMock, patch
+
+    name_r = MagicMock(spec=subprocess.CompletedProcess)
+    name_r.returncode = 0
+    name_r.stdout = "Jason's iPhone\n"
+
+    serial_r = MagicMock(spec=subprocess.CompletedProcess)
+    serial_r.returncode = 0
+    serial_r.stdout = "ABC123\n"
+
+    with patch("app.engines.ios.subprocess.run", side_effect=[name_r, serial_r]):
+        r = client.get("/api/devices/detect-ios")
+
+    assert r.status_code == 200
+    data = r.json()
+    assert data["available"] is True
+    assert data["name"] == "Jason's iPhone"
+
+
+def test_detect_ios_not_available(client: TestClient) -> None:
+    from unittest.mock import patch
+
+    with patch("app.engines.ios.subprocess.run", side_effect=FileNotFoundError()):
+        r = client.get("/api/devices/detect-ios")
+
+    assert r.status_code == 200
+    assert r.json()["available"] is False
+
+
+def test_trigger_ios_extract_from_registered(client: TestClient, session: Session) -> None:
+    make_device(session, stage="registered", device_type="iphone", source_path=None)
+    r = client.post("/api/devices/1/jobs", json={"job_type": "ios_extract"})
+    assert r.status_code == 202
+    assert "job_id" in r.json()
+
+
+def test_trigger_ios_extract_wrong_stage(client: TestClient, session: Session) -> None:
+    make_device(session, stage="cataloged")
+    r = client.post("/api/devices/1/jobs", json={"job_type": "ios_extract"})
+    assert r.status_code == 409
+
+
 def test_trigger_wipe_from_verified(client: TestClient, session: Session) -> None:
     make_device(session, stage="verified", source_path="/tmp")
     r = client.post("/api/devices/1/jobs", json={"job_type": "wipe"})
@@ -421,5 +465,102 @@ def test_background_wipe_task_apple(
             assert d is not None
             # Apple device stays in wiping — user must click Mark as Wiped
             assert d.stage.value == "wiping"
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)
+
+
+def test_background_ios_extract_task(
+    engine: object,
+    tmp_data_dir: object,
+    monkeypatch: object,
+) -> None:
+    """Cover the _run() ios_extract branch — auto-runs catalog after extraction."""
+    import asyncio
+    import subprocess
+    from contextlib import contextmanager
+    from typing import Any
+    from unittest.mock import MagicMock, patch
+
+    from fastapi.testclient import TestClient
+    from sqlmodel import Session as _Session
+
+    import app.core.database as _db_module
+    from app.core.deps import get_db_session
+    from app.core.runner import SubprocessRunner
+    from app.main import app
+
+    @contextmanager  # type: ignore[misc]
+    def _session_factory() -> Any:
+        with _Session(engine) as s:  # type: ignore[arg-type]
+            yield s
+
+    def _override_session() -> Any:
+        with _Session(engine) as s:  # type: ignore[arg-type]
+            yield s
+
+    monkeypatch.setattr(_db_module, "engine", engine)  # type: ignore[misc]
+    monkeypatch.setattr(_db_module, "get_session", _session_factory)  # type: ignore[misc]
+    app.dependency_overrides[get_db_session] = _override_session
+    app.state.runner = SubprocessRunner(_session_factory)
+
+    with _Session(engine) as s:  # type: ignore[arg-type]
+        from tests.conftest import make_device as _make_device
+
+        _make_device(s, device_type="iphone", stage="registered", source_path=None)
+
+    captured_coros: list[Any] = []
+
+    def fake_create_task(coro: Any) -> Any:
+        captured_coros.append(coro)
+        return MagicMock()
+
+    ok = MagicMock(spec=subprocess.CompletedProcess)
+    ok.returncode = 0
+    ok.stderr = ""
+
+    async def _noop_extract(job_id: int, device: Any, session: Any, runner: Any) -> None:
+        from app.models.enums import JobStatus
+        from app.models.job import Job
+
+        j = session.get(Job, job_id)
+        if j:
+            j.status = JobStatus.completed
+            session.add(j)
+            session.commit()
+
+    async def _noop_catalog(job_id: int, device: Any, session: Any, runner: Any) -> None:
+        from app.models.enums import JobStatus
+        from app.models.job import Job
+
+        j = session.get(Job, job_id)
+        if j:
+            j.status = JobStatus.completed
+            session.add(j)
+            session.commit()
+
+    try:
+        with (
+            patch("app.main.subprocess.run", return_value=ok),
+            patch("app.core.deps.check_dependencies", MagicMock(return_value=[])),
+            patch("app.api.devices.asyncio.create_task", fake_create_task),
+            TestClient(app, raise_server_exceptions=True) as c,
+        ):
+            r = c.post("/api/devices/1/jobs", json={"job_type": "ios_extract"})
+            assert r.status_code == 202
+
+        assert len(captured_coros) == 1
+        with (
+            patch("app.engines.ios.run_ios_extract", _noop_extract),
+            patch("app.engines.catalog.run_catalog", _noop_catalog),
+        ):
+            asyncio.run(captured_coros[0])
+
+        with _Session(engine) as s:  # type: ignore[arg-type]
+            from app.models.device import Device
+
+            d = s.get(Device, 1)
+            assert d is not None
+            # ios_extract branch ran: device is cataloged on success, registered on failure
+            assert d.stage.value in ("cataloged", "registered")
     finally:
         app.dependency_overrides.pop(get_db_session, None)
