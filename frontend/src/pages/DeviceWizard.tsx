@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getDevice, triggerJob, getDupStats } from '../lib/api'
+import { getDevice, triggerJob, getDupStats, clearStaging } from '../lib/api'
 import { StageProgress } from '../components/StageProgress'
 import { JobLog } from '../components/JobLog'
 import { MigrateStage } from './MigrateStage'
@@ -35,6 +35,11 @@ export function DeviceWizard() {
       setActiveJobId(res.job_id)
       queryClient.invalidateQueries({ queryKey: ['device', deviceId] })
     },
+  })
+
+  const clearStagingMutation = useMutation({
+    mutationFn: () => clearStaging(deviceId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['device', deviceId] }),
   })
 
   if (isLoading || !device) {
@@ -105,6 +110,20 @@ export function DeviceWizard() {
                 Re-catalog
               </button>
             </div>
+            {device.staging_path && (
+              <div className="mt-3 flex items-center justify-between text-xs text-gray-400 bg-gray-50 border border-gray-100 rounded px-3 py-2">
+                <span>
+                  Staging dir: <code className="font-mono">{device.staging_path}</code>
+                </span>
+                <button
+                  onClick={() => clearStagingMutation.mutate()}
+                  disabled={clearStagingMutation.isPending}
+                  className="ml-3 text-red-400 hover:text-red-600 disabled:opacity-50"
+                >
+                  {clearStagingMutation.isPending ? 'Removing…' : 'Free space'}
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div>

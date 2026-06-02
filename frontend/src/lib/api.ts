@@ -1,7 +1,7 @@
 import type {
   Device, DeviceCreate, Job, Dependency,
   FileEntryPage, DuplicateGroup, DupStats, FileStatus,
-  StorageTarget, StorageTargetCreate, Snapshot, IosDetectResult,
+  StorageTarget, StorageTargetCreate, Snapshot, IosDetectResult, StorageBackend,
 } from '../types/api'
 
 const BASE = '/api'
@@ -125,3 +125,21 @@ export const markRecycled = (deviceId: number) =>
   request<Device>(`/devices/${deviceId}/mark-recycled`, { method: 'POST' })
 
 export const getCertificateUrl = (deviceId: number) => `${BASE}/devices/${deviceId}/certificate`
+
+// Storage target update
+export interface StorageTargetUpdate {
+  name?: string
+  backend?: StorageBackend
+  path?: string
+  restic_password_env?: string
+  is_default?: boolean
+}
+export const updateStorageTarget = (id: number, body: StorageTargetUpdate) =>
+  request<StorageTarget>(`/storage-targets/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  })
+
+// Staging dir cleanup (iOS devices)
+export const clearStaging = (deviceId: number) =>
+  request<Device>(`/devices/${deviceId}/clear-staging`, { method: 'POST' })

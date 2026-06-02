@@ -130,9 +130,10 @@ describe('MigrateStage', () => {
     expect(screen.queryByText(/abc12345/)).not.toBeInTheDocument()
   })
 
-  it('shows wipe coming soon when verified', async () => {
+  it('shows restic check passed message when verified', async () => {
+    vi.mocked(getSnapshots).mockResolvedValue([makeSnapshot()])
     render(makeDevice({ stage: 'verified' }))
-    await waitFor(() => screen.getByText(/wipe stage coming/i))
+    await waitFor(() => screen.getByText(/restic check passed/i))
   })
 
   it('disables start button when no targets', async () => {

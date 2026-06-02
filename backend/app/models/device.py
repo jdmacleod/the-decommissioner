@@ -38,6 +38,7 @@ class DeviceCreate(DeviceBase):
 class DeviceRead(DeviceBase):
     id: int
     stage: DeviceStage
+    staging_path: str | None = None
     created_at: datetime
     updated_at: datetime
 

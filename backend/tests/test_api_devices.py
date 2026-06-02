@@ -231,6 +231,32 @@ def test_list_device_jobs_not_found(client: TestClient) -> None:
     assert client.get("/api/devices/99/jobs").status_code == 404
 
 
+def test_clear_staging_ok(client: TestClient, session: Session, tmp_path) -> None:
+
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    (staging / "file.txt").write_text("data")
+    device = make_device(session, device_type="iphone", source_path=None)
+    device.staging_path = str(staging)
+    session.add(device)
+    session.commit()
+
+    r = client.post(f"/api/devices/{device.id}/clear-staging")
+    assert r.status_code == 200
+    assert r.json()["staging_path"] is None
+    assert not staging.exists()
+
+
+def test_clear_staging_no_staging_path(client: TestClient, session: Session) -> None:
+    make_device(session)
+    r = client.post("/api/devices/1/clear-staging")
+    assert r.status_code == 409
+
+
+def test_clear_staging_not_found(client: TestClient) -> None:
+    assert client.post("/api/devices/99/clear-staging").status_code == 404
+
+
 def test_background_catalog_task_runs(
     engine: object,
     tmp_data_dir: object,

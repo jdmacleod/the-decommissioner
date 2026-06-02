@@ -11,7 +11,7 @@ import { getDevices } from '../lib/api'
 
 const makeDevice = (overrides = {}) => ({
   id: 1, name: 'Test MBP', device_type: 'mac' as const, stage: 'registered' as const,
-  source_path: '/Users/test', serial_number: null, notes: null,
+  source_path: '/Users/test', serial_number: null, notes: null, staging_path: null,
   created_at: '2024-01-01', updated_at: '2024-01-01',
   ...overrides,
 })
@@ -38,10 +38,16 @@ describe('Dashboard', () => {
     await waitFor(() => expect(screen.getByText('Test MBP')).toBeInTheDocument())
   })
 
-  it('shows device stage in card', async () => {
+  it('shows device stage label in card', async () => {
     vi.mocked(getDevices).mockResolvedValue([makeDevice()])
     renderWithProviders(<Dashboard />)
-    await waitFor(() => screen.getByText('registered'))
+    await waitFor(() => screen.getByText('Not started'))
+  })
+
+  it('shows next action button for cataloged device', async () => {
+    vi.mocked(getDevices).mockResolvedValue([makeDevice({ stage: 'cataloged' })])
+    renderWithProviders(<Dashboard />)
+    await waitFor(() => screen.getByText(/Review Files/i))
   })
 
   it('shows source path when present', async () => {

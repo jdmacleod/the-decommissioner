@@ -331,6 +331,27 @@ def list_device_jobs(device_id: int, session: SessionDep) -> list:
     )
 
 
+@router.post("/{device_id}/clear-staging", response_model=DeviceRead)
+def clear_staging(device_id: int, session: SessionDep) -> Device:
+    import shutil
+
+    device = session.get(Device, device_id)
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    if not device.staging_path:
+        raise HTTPException(status_code=409, detail="Device has no staging directory")
+    try:
+        shutil.rmtree(device.staging_path, ignore_errors=True)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to remove staging dir: {exc}") from exc
+    device.staging_path = None
+    device.updated_at = datetime.utcnow()
+    session.add(device)
+    session.commit()
+    session.refresh(device)
+    return device
+
+
 @router.post("/{device_id}/mark-wiped", response_model=DeviceRead)
 def mark_wiped(device_id: int, session: SessionDep) -> Device:
     device = session.get(Device, device_id)

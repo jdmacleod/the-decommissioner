@@ -12,6 +12,8 @@ dev-frontend:
 
 build:
 	cd $(FRONTEND_DIR) && npm run build
+	rm -rf $(BACKEND_DIR)/app/static
+	cp -r $(FRONTEND_DIR)/dist $(BACKEND_DIR)/app/static
 
 install-deps:
 	@echo "==> Installing Python deps"
@@ -54,4 +56,4 @@ check:
 	@echo "All checks passed."
 
 docker-up:
-	docker-compose up --build
+	docker compose up --build

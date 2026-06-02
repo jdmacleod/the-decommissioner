@@ -19,6 +19,7 @@ export interface Device {
   serial_number: string | null
   notes: string | null
   stage: DeviceStage
+  staging_path?: string | null
   created_at: string
   updated_at: string
 }

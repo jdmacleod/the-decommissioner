@@ -110,24 +110,35 @@ export function MigrateStage({ device, deviceId }: MigrateStageProps) {
       {isVerified && (
         <div>
           <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2 mb-3">
-            ✓ Migration and verification complete
+            &#10003; Migration and verification complete
           </div>
-          {latestSnapshot && (
-            <div className="text-sm text-gray-600 space-y-1 mb-3">
-              <div>
-                Snapshot{' '}
+          {latestSnapshot ? (
+            <div className="text-sm space-y-2 mb-3">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-gray-600">
+                <span className="text-gray-400">Snapshot</span>
                 <code className="bg-gray-100 px-1 rounded text-xs">
                   {latestSnapshot.restic_snapshot_id}
                 </code>
+                <span className="text-gray-400">Files</span>
+                <span>{latestSnapshot.file_count.toLocaleString()}</span>
+                <span className="text-gray-400">Total size</span>
+                <span>{(latestSnapshot.total_bytes / 1e9).toFixed(2)} GB</span>
+                <span className="text-gray-400">Added (net)</span>
+                <span>{(latestSnapshot.added_bytes / 1e9).toFixed(2)} GB</span>
+                <span className="text-gray-400">Verified at</span>
+                <span>
+                  {latestSnapshot.verified_at
+                    ? new Date(latestSnapshot.verified_at).toLocaleString()
+                    : '—'}
+                </span>
               </div>
-              <div>
-                {latestSnapshot.file_count.toLocaleString()} files ·{' '}
-                {(latestSnapshot.total_bytes / 1e9).toFixed(1)} GB total ·{' '}
-                {(latestSnapshot.added_bytes / 1e9).toFixed(1)} GB added
+              <div className="flex items-center gap-1.5 text-xs text-green-700 mt-1">
+                &#10003; restic check passed — repository is consistent
               </div>
             </div>
+          ) : (
+            <div className="text-sm text-gray-400 mb-3">No snapshot record found.</div>
           )}
-          <div className="text-sm text-gray-400 italic">Wipe stage coming in v0.4</div>
         </div>
       )}
     </div>
