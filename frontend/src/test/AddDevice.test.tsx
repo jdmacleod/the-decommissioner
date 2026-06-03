@@ -8,9 +8,10 @@ vi.mock('../lib/api', () => ({
   createDevice: vi.fn(),
   detectIos: vi.fn(),
   detectVolumes: vi.fn(),
+  uploadDevicePhoto: vi.fn(),
 }))
 
-import { createDevice, detectIos, detectVolumes } from '../lib/api'
+import { createDevice, detectIos, detectVolumes, uploadDevicePhoto } from '../lib/api'
 
 const newDevice = {
   id: 1, name: 'My Drive', device_type: 'hard_drive' as const, stage: 'registered' as const,
@@ -22,6 +23,7 @@ beforeEach(() => {
   vi.mocked(createDevice).mockResolvedValue(newDevice)
   vi.mocked(detectIos).mockResolvedValue({ available: true, name: "Jason's iPhone", serial: 'ABC123' })
   vi.mocked(detectVolumes).mockResolvedValue([])
+  vi.mocked(uploadDevicePhoto).mockResolvedValue({ ...newDevice, photo_path: '/data/photos/device_1.jpg' })
 })
 
 describe('AddDevice form', () => {
@@ -175,5 +177,47 @@ describe('AddDevice form', () => {
     renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
     await userEvent.click(screen.getByRole('button', { name: /scan volumes/i }))
     await waitFor(() => screen.getByText(/No volumes detected/i))
+  })
+
+  it('renders the photo upload area', () => {
+    renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
+    expect(screen.getByText(/Photo/i)).toBeInTheDocument()
+    expect(screen.getByText(/drag & drop or click to browse/i)).toBeInTheDocument()
+  })
+
+  it('uploads photo after device creation when file selected', async () => {
+    renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
+
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'mac')
+    await userEvent.type(screen.getByPlaceholderText(/Jason's 2019 MBP/i), 'Test MBP')
+
+    // Select a photo
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    const file = new File([new Uint8Array(100)], 'photo.jpg', { type: 'image/jpeg' })
+    await userEvent.upload(input, file)
+
+    await waitFor(() => screen.getByText(/clear selection/i))
+
+    // Submit
+    await userEvent.click(screen.getByRole('button', { name: /create device/i }))
+    await waitFor(() => expect(createDevice).toHaveBeenCalled())
+    await waitFor(() => expect(uploadDevicePhoto).toHaveBeenCalledWith(1, file))
+  })
+
+  it('navigates without error if photo upload fails', async () => {
+    vi.mocked(uploadDevicePhoto).mockRejectedValue(new Error('upload failed'))
+    renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
+
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'mac')
+    await userEvent.type(screen.getByPlaceholderText(/Jason's 2019 MBP/i), 'Test MBP')
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    const file = new File([new Uint8Array(100)], 'photo.jpg', { type: 'image/jpeg' })
+    await userEvent.upload(input, file)
+    await waitFor(() => screen.getByText(/clear selection/i))
+
+    await userEvent.click(screen.getByRole('button', { name: /create device/i }))
+    await waitFor(() => expect(createDevice).toHaveBeenCalled())
+    // Should still navigate (no unhandled error)
   })
 })

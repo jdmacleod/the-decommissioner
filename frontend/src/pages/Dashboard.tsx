@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { getDevices, getDupStats, getFileEntries } from '../lib/api'
+import { getDevices, getDupStats, getFileEntries, getDevicePhotoUrl } from '../lib/api'
 import type { Device, DeviceStage } from '../types/api'
 
 const STAGE_GROUPS: { label: string; stages: DeviceStage[]; color: string }[] = [
@@ -108,7 +108,15 @@ function DeviceCard({ device }: { device: Device }) {
     <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
       <Link to={`/devices/${device.id}`} className="block">
         <div className="flex items-start gap-2">
-          <span className="text-lg leading-none mt-0.5">{icon}</span>
+          {device.photo_path ? (
+            <img
+              src={`${getDevicePhotoUrl(device.id)}?v=${device.updated_at}`}
+              alt={device.name}
+              className="w-10 h-10 rounded object-cover shrink-0"
+            />
+          ) : (
+            <span className="text-lg leading-none mt-0.5">{icon}</span>
+          )}
           <div className="min-w-0 flex-1">
             <div className="font-medium text-gray-900 truncate text-sm">{device.name}</div>
             <div className="text-xs text-gray-500 mt-0.5 capitalize">

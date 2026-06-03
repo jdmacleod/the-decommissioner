@@ -1,7 +1,9 @@
+import { useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { getDevice, getDupStats } from '../lib/api'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { getDevice, getDupStats, getDevicePhotoUrl, uploadDevicePhoto, deleteDevicePhoto } from '../lib/api'
 import { StageProgress } from '../components/StageProgress'
+import { PhotoUpload } from '../components/PhotoUpload'
 import { CatalogStage } from '../stages/CatalogStage'
 import { VerifyStage } from '../stages/VerifyStage'
 import { MigrateStage } from './MigrateStage'
@@ -31,6 +33,10 @@ const RECYCLE_ACTIVE: DeviceStage[] = ['wiped', 'recycled']
 export function DeviceWizard() {
   const { id } = useParams<{ id: string }>()
   const deviceId = Number(id)
+  const queryClient = useQueryClient()
+  const [editingPhoto, setEditingPhoto] = useState(false)
+  const [pendingPhoto, setPendingPhoto] = useState<File | null>(null)
+  const uploadingRef = useRef(false)
 
   const { data: device, isLoading } = useQuery({
     queryKey: ['device', deviceId],
@@ -48,6 +54,28 @@ export function DeviceWizard() {
     return <div className="p-8 text-gray-500">Loading...</div>
   }
 
+  const photoUrl = device.photo_path
+    ? `${getDevicePhotoUrl(deviceId)}?v=${device.updated_at}`
+    : null
+
+  const handlePhotoChange = async (file: File | null) => {
+    setPendingPhoto(file)
+    if (file && !uploadingRef.current) {
+      uploadingRef.current = true
+      await uploadDevicePhoto(deviceId, file).catch(() => {})
+      uploadingRef.current = false
+      setPendingPhoto(null)
+      setEditingPhoto(false)
+      queryClient.invalidateQueries({ queryKey: ['device', deviceId] })
+    }
+  }
+
+  const handlePhotoDelete = async () => {
+    await deleteDevicePhoto(deviceId).catch(() => {})
+    setEditingPhoto(false)
+    queryClient.invalidateQueries({ queryKey: ['device', deviceId] })
+  }
+
   const panelClass = (active: boolean) =>
     `border rounded-lg p-5 mt-4 ${active ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100 opacity-50'}`
 
@@ -60,13 +88,64 @@ export function DeviceWizard() {
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
-      <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-900">{device.name}</h2>
-        <div className="text-sm text-gray-500 capitalize mt-1">
-          {device.device_type.replace('_', ' ')}
-          {device.source_path && (
-            <span className="font-mono ml-2 text-gray-400">{device.source_path}</span>
+      <div className="mb-6 flex items-start gap-4">
+        {/* Photo slot */}
+        <div className="shrink-0">
+          {editingPhoto ? (
+            <div className="w-48">
+              <PhotoUpload
+                value={pendingPhoto}
+                existingUrl={photoUrl}
+                onChange={handlePhotoChange}
+                onDelete={handlePhotoDelete}
+              />
+              {!pendingPhoto && (
+                <button
+                  type="button"
+                  onClick={() => setEditingPhoto(false)}
+                  className="mt-1 text-xs text-gray-400 hover:underline"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setEditingPhoto(true)}
+              title="Add or change photo"
+              className="group relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 hover:border-blue-400 transition-colors"
+            >
+              {photoUrl ? (
+                <img
+                  src={photoUrl}
+                  alt={device.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gray-100 flex items-center justify-center text-3xl">
+                  {device.device_type === 'mac' ? '💻'
+                    : device.device_type === 'linux' ? '🐧'
+                    : device.device_type === 'iphone' ? '📱'
+                    : device.device_type === 'ipad' ? '📱'
+                    : '💾'}
+                </div>
+              )}
+              <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <span className="text-white text-xs font-medium">📷</span>
+              </div>
+            </button>
           )}
+        </div>
+
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">{device.name}</h2>
+          <div className="text-sm text-gray-500 capitalize mt-1">
+            {device.device_type.replace('_', ' ')}
+            {device.source_path && (
+              <span className="font-mono ml-2 text-gray-400">{device.source_path}</span>
+            )}
+          </div>
         </div>
       </div>
 

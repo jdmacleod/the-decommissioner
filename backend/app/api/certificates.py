@@ -1,5 +1,7 @@
+import contextlib
 import io
 import json
+import os
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
@@ -55,6 +57,12 @@ def _generate_pdf(
         new_x="LMARGIN",
         new_y="NEXT",
     )
+
+    # Embed device photo in the top-right corner if available
+    if device.photo_path and os.path.isfile(device.photo_path):
+        with contextlib.suppress(Exception):
+            pdf.image(device.photo_path, x=160, y=15, w=35)
+
     pdf.ln(4)
 
     def section(title: str) -> None:

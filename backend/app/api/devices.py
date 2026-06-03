@@ -1,16 +1,27 @@
 import asyncio
+import contextlib
 import os
 import sys
 from datetime import datetime
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlmodel import select
 
+from app.core.config import settings
 from app.core.deps import SessionDep, get_runner
 from app.core.job_factory import create_job
 from app.models.device import Device, DeviceCreate, DeviceRead, DeviceUpdate
 from app.models.enums import DeviceStage, JobType
+
+PHOTO_MAX_BYTES = 5 * 1024 * 1024  # 5 MB
+PHOTO_ALLOWED_TYPES = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+}
 
 # Valid stage transitions triggered by starting a job
 JOB_START_TRANSITIONS: dict[JobType, tuple[DeviceStage, DeviceStage]] = {
@@ -87,6 +98,77 @@ def detect_volumes() -> list[VolumeEntry]:
             except OSError:
                 pass
     return results
+
+
+@router.post("/{device_id}/photo", response_model=DeviceRead)
+async def upload_device_photo(
+    device_id: int,
+    session: SessionDep,
+    file: Annotated[UploadFile, File()],
+) -> Device:
+    device = session.get(Device, device_id)
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+
+    content_type = (file.content_type or "").split(";")[0].strip().lower()
+    if content_type not in PHOTO_ALLOWED_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported image type '{content_type}'. Accepted: jpeg, png, webp.",
+        )
+
+    data = await file.read(PHOTO_MAX_BYTES + 1)
+    if len(data) > PHOTO_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="Image exceeds the 5 MB size limit.")
+
+    ext = PHOTO_ALLOWED_TYPES[content_type]
+    settings.photos_dir.mkdir(parents=True, exist_ok=True)
+    dest = settings.photos_dir / f"device_{device_id}.{ext}"
+
+    # Remove any previous photo file (different extension)
+    if device.photo_path and device.photo_path != str(dest):
+        with contextlib.suppress(OSError):
+            os.remove(device.photo_path)
+
+    dest.write_bytes(data)
+    device.photo_path = str(dest)
+    device.updated_at = datetime.utcnow()
+    session.add(device)
+    session.commit()
+    session.refresh(device)
+    return device
+
+
+@router.get("/{device_id}/photo")
+def get_device_photo(device_id: int, session: SessionDep) -> FileResponse:
+    device = session.get(Device, device_id)
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    if not device.photo_path or not os.path.isfile(device.photo_path):
+        raise HTTPException(status_code=404, detail="No photo for this device.")
+    ext = device.photo_path.rsplit(".", 1)[-1].lower()
+    media_type = {
+        "jpg": "image/jpeg",
+        "png": "image/png",
+        "webp": "image/webp",
+    }.get(ext, "application/octet-stream")
+    return FileResponse(device.photo_path, media_type=media_type)
+
+
+@router.delete("/{device_id}/photo", response_model=DeviceRead)
+def delete_device_photo(device_id: int, session: SessionDep) -> Device:
+    device = session.get(Device, device_id)
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    if device.photo_path:
+        with contextlib.suppress(OSError):
+            os.remove(device.photo_path)
+        device.photo_path = None
+        device.updated_at = datetime.utcnow()
+        session.add(device)
+        session.commit()
+        session.refresh(device)
+    return device
 
 
 @router.get("/{device_id}", response_model=DeviceRead)

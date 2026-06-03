@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { getDevices, getDependencies, getStorageTargets } from '../lib/api'
+import { getDevices, getDependencies, getStorageTargets, getDevicePhotoUrl } from '../lib/api'
 import type { Device, DeviceStage } from '../types/api'
 
 function stageDot(stage: DeviceStage): { dot: boolean; className: string } {
@@ -80,7 +80,15 @@ export function DeviceSidebar() {
                 ) : (
                   <span className={`shrink-0 ${className}`}>✓</span>
                 )}
-                <DeviceTypeIcon type={device.device_type} />
+                {device.photo_path ? (
+                  <img
+                    src={`${getDevicePhotoUrl(device.id)}?v=${device.updated_at}`}
+                    alt={device.name}
+                    className="w-5 h-5 rounded-full object-cover shrink-0"
+                  />
+                ) : (
+                  <DeviceTypeIcon type={device.device_type} />
+                )}
                 <span className="truncate">{device.name}</span>
               </Link>
             )

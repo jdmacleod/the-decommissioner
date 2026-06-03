@@ -20,6 +20,7 @@ export interface Device {
   notes: string | null
   stage: DeviceStage
   staging_path?: string | null
+  photo_path?: string | null
   created_at: string
   updated_at: string
 }

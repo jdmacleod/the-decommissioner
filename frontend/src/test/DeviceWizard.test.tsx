@@ -10,6 +10,9 @@ vi.mock('../lib/api', () => ({
   getDependencies: vi.fn(),
   getFileEntries: vi.fn(),
   clearStaging: vi.fn(),
+  uploadDevicePhoto: vi.fn(),
+  deleteDevicePhoto: vi.fn(),
+  getDevicePhotoUrl: (id: number) => `/api/devices/${id}/photo`,
 }))
 
 vi.mock('../components/JobLog', () => ({
@@ -183,5 +186,34 @@ describe('DeviceWizard', () => {
     vi.mocked(getDevice).mockResolvedValue(makeDevice({ stage: 'cataloged' }))
     renderWithProviders(<DeviceWizard />, { initialPath: '/devices/1', routePath: '/devices/:id' })
     await waitFor(() => screen.getByText(/Step 6 — Recycle/))
+  })
+
+  it('shows photo thumbnail when device has photo_path', async () => {
+    vi.mocked(getDevice).mockResolvedValue(
+      makeDevice({ photo_path: '/data/photos/device_1.jpg' })
+    )
+    renderWithProviders(<DeviceWizard />, { initialPath: '/devices/1', routePath: '/devices/:id' })
+    await waitFor(() => screen.getByText('Test MBP'))
+    const img = screen.getByRole('img', { name: 'Test MBP' })
+    expect(img).toHaveAttribute('src', expect.stringContaining('/api/devices/1/photo'))
+  })
+
+  it('shows emoji icon when device has no photo', async () => {
+    vi.mocked(getDevice).mockResolvedValue(makeDevice({ photo_path: null }))
+    renderWithProviders(<DeviceWizard />, { initialPath: '/devices/1', routePath: '/devices/:id' })
+    await waitFor(() => screen.getByText('Test MBP'))
+    expect(screen.queryByRole('img', { name: 'Test MBP' })).not.toBeInTheDocument()
+  })
+
+  it('shows photo upload area when edit button clicked', async () => {
+    vi.mocked(getDevice).mockResolvedValue(makeDevice({ photo_path: null }))
+    renderWithProviders(<DeviceWizard />, { initialPath: '/devices/1', routePath: '/devices/:id' })
+    await waitFor(() => screen.getByText('Test MBP'))
+    // Click the photo slot button (title="Add or change photo")
+    const photoBtn = screen.getByTitle(/add or change photo/i)
+    await import('@testing-library/user-event').then(({ default: userEvent }) =>
+      userEvent.click(photoBtn)
+    )
+    await waitFor(() => screen.getByText(/drag & drop or click to browse/i))
   })
 })

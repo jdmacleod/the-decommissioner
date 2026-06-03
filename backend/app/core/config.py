@@ -19,5 +19,9 @@ class Settings(BaseSettings):
     def logs_dir(self) -> Path:
         return Path(self.data_dir) / "logs"
 
+    @property
+    def photos_dir(self) -> Path:
+        return Path(self.data_dir) / "photos"
+
 
 settings = Settings()

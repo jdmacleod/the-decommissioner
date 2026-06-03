@@ -5,6 +5,7 @@ import {
   getFileEntries, bulkUpdateFileStatus,
   getDuplicateGroups, resolveGroup, autoResolveGroups, getDupStats,
   getDependencies, recheckDependencies,
+  getDevicePhotoUrl, uploadDevicePhoto, deleteDevicePhoto,
 } from '../lib/api'
 
 function mockFetch(body: unknown, ok = true, status = 200) {
@@ -155,5 +156,42 @@ describe('dependencies API', () => {
     mockFetch([])
     await recheckDependencies()
     expect(fetch).toHaveBeenCalledWith('/api/dependencies/recheck', expect.objectContaining({ method: 'POST' }))
+  })
+})
+
+describe('photo API', () => {
+  it('getDevicePhotoUrl returns expected URL', () => {
+    expect(getDevicePhotoUrl(7)).toBe('/api/devices/7/photo')
+  })
+
+  it('uploadDevicePhoto POSTs with FormData to /devices/:id/photo', async () => {
+    const device = { id: 1, name: 'MBP', photo_path: '/photos/device_1.jpg' }
+    mockFetch(device)
+    const file = new File([new Uint8Array(10)], 'photo.jpg', { type: 'image/jpeg' })
+    const result = await uploadDevicePhoto(1, file)
+    expect(result.photo_path).toBe('/photos/device_1.jpg')
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/devices/1/photo',
+      expect.objectContaining({ method: 'POST' })
+    )
+    // Should NOT have Content-Type: application/json (multipart boundary set by browser)
+    const [, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0]
+    expect(init.headers?.['Content-Type']).toBeUndefined()
+  })
+
+  it('uploadDevicePhoto throws on non-ok response', async () => {
+    mockFetch({ detail: 'too large' }, false, 413)
+    const file = new File([new Uint8Array(10)], 'big.jpg', { type: 'image/jpeg' })
+    await expect(uploadDevicePhoto(1, file)).rejects.toThrow('413')
+  })
+
+  it('deleteDevicePhoto DELETEs /devices/:id/photo', async () => {
+    mockFetch({ id: 1, photo_path: null })
+    const result = await deleteDevicePhoto(1)
+    expect(result.photo_path).toBeNull()
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/devices/1/photo',
+      expect.objectContaining({ method: 'DELETE' })
+    )
   })
 })

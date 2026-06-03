@@ -7,6 +7,7 @@ vi.mock('../lib/api', () => ({
   getDevices: vi.fn(),
   getDupStats: vi.fn(),
   getFileEntries: vi.fn(),
+  getDevicePhotoUrl: (id: number) => `/api/devices/${id}/photo`,
 }))
 
 import { getDevices, getDupStats, getFileEntries } from '../lib/api'
@@ -85,5 +86,22 @@ describe('Dashboard', () => {
     renderWithProviders(<Dashboard />)
     await waitFor(() => screen.getByText('Test MBP'))
     expect(screen.getByText('Wipe (0)')).toBeInTheDocument()
+  })
+
+  it('shows photo thumbnail in card when photo_path is set', async () => {
+    vi.mocked(getDevices).mockResolvedValue([
+      makeDevice({ photo_path: '/data/photos/device_1.jpg' }),
+    ])
+    renderWithProviders(<Dashboard />)
+    await waitFor(() => screen.getByText('Test MBP'))
+    const img = screen.getByRole('img', { name: 'Test MBP' })
+    expect(img).toHaveAttribute('src', expect.stringContaining('/api/devices/1/photo'))
+  })
+
+  it('shows emoji icon when no photo_path', async () => {
+    vi.mocked(getDevices).mockResolvedValue([makeDevice({ photo_path: null })])
+    renderWithProviders(<Dashboard />)
+    await waitFor(() => screen.getByText('Test MBP'))
+    expect(screen.queryByRole('img', { name: 'Test MBP' })).not.toBeInTheDocument()
   })
 })

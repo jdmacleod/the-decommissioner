@@ -151,3 +151,20 @@ export const clearStaging = (deviceId: number) =>
 // Detect mounted volumes (for HDD/USB source path selection)
 export const detectVolumes = () =>
   request<{ path: string; label: string }[]>('/devices/detect-volumes')
+
+// Device photos
+export const getDevicePhotoUrl = (deviceId: number) => `${BASE}/devices/${deviceId}/photo`
+
+export const uploadDevicePhoto = async (deviceId: number, file: File): Promise<Device> => {
+  const form = new FormData()
+  form.append('file', file)
+  const res = await fetch(`${BASE}/devices/${deviceId}/photo`, { method: 'POST', body: form })
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`${res.status} ${res.statusText}: ${text}`)
+  }
+  return res.json()
+}
+
+export const deleteDevicePhoto = (deviceId: number) =>
+  request<Device>(`/devices/${deviceId}/photo`, { method: 'DELETE' })

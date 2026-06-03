@@ -25,6 +25,7 @@ async def lifespan(app: FastAPI):
     # Ensure data directories exist
     Path(settings.data_dir).mkdir(parents=True, exist_ok=True)
     settings.logs_dir.mkdir(parents=True, exist_ok=True)
+    settings.photos_dir.mkdir(parents=True, exist_ok=True)
 
     # Run alembic migrations
     backend_dir = Path(__file__).parent.parent

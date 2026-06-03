@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { createDevice, detectIos, detectVolumes } from '../lib/api'
+import { createDevice, detectIos, detectVolumes, uploadDevicePhoto } from '../lib/api'
+import { PhotoUpload } from '../components/PhotoUpload'
 import type { DeviceType } from '../types/api'
 
 const DEVICE_TYPES: { value: DeviceType; label: string }[] = [
@@ -24,13 +25,18 @@ export function AddDevice() {
   const [sourcePath, setSourcePath] = useState('')
   const [serialNumber, setSerialNumber] = useState('')
   const [notes, setNotes] = useState('')
+  const [photo, setPhoto] = useState<File | null>(null)
   const [detectError, setDetectError] = useState<string | null>(null)
   const [volumes, setVolumes] = useState<{ path: string; label: string }[]>([])
   const [volumeScanDone, setVolumeScanDone] = useState(false)
 
   const mutation = useMutation({
     mutationFn: createDevice,
-    onSuccess: (device) => {
+    onSuccess: async (device) => {
+      if (photo) {
+        // Best-effort — navigate regardless of photo upload result
+        await uploadDevicePhoto(device.id, photo).catch(() => {})
+      }
       queryClient.invalidateQueries({ queryKey: ['devices'] })
       navigate(`/devices/${device.id}`)
     },
@@ -199,6 +205,13 @@ export function AddDevice() {
             rows={3}
             className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Photo <span className="font-normal text-gray-400">(optional)</span>
+          </label>
+          <PhotoUpload value={photo} existingUrl={null} onChange={setPhoto} />
         </div>
 
         {mutation.error && (

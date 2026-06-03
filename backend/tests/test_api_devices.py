@@ -444,3 +444,131 @@ def test_detect_volumes_on_darwin(client: TestClient, monkeypatch: pytest.Monkey
     labels = [e["label"] for e in data]
     assert ".hidden" not in labels
     assert "Macintosh HD" in labels
+
+
+# ── photo upload / serve / delete ────────────────────────────────────────────
+
+
+def _jpeg_bytes(size: int = 100) -> bytes:
+    """Return a tiny valid JPEG (1×1 white pixel) padded to `size` bytes."""
+    # Minimal valid JPEG
+    tiny = (
+        b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00"
+        b"\xff\xdb\x00C\x00\x08\x06\x06\x07\x06\x05\x08\x07\x07\x07\t\t"
+        b"\x08\n\x0c\x14\r\x0c\x0b\x0b\x0c\x19\x12\x13\x0f\x14\x1d\x1a"
+        b"\x1f\x1e\x1d\x1a\x1c\x1c $.' \",#\x1c\x1c(7),\x01\x02\x03"
+        b"\xff\xc0\x00\x0b\x08\x00\x01\x00\x01\x01\x01\x11\x00"
+        b"\xff\xc4\x00\x1f\x00\x00\x01\x05\x01\x01\x01\x01\x01\x01\x00\x00"
+        b"\x00\x00\x00\x00\x00\x00\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b"
+        b"\xff\xda\x00\x08\x01\x01\x00\x00?\x00\xf5\x0a\xff\xd9"
+    )
+    return tiny + b"\x00" * max(0, size - len(tiny))
+
+
+def test_upload_photo_ok(client: TestClient, session: Session, tmp_path: object) -> None:
+    from unittest.mock import patch
+
+    make_device(session)
+
+    with patch("app.api.devices.settings") as mock_settings:
+        mock_settings.photos_dir = tmp_path  # type: ignore[attr-defined]
+        r = client.post(
+            "/api/devices/1/photo",
+            files={"file": ("device.jpg", _jpeg_bytes(), "image/jpeg")},
+        )
+
+    assert r.status_code == 200
+    data = r.json()
+    assert data["photo_path"] is not None
+    assert "device_1" in data["photo_path"]
+
+
+def test_upload_photo_wrong_type(client: TestClient, session: Session) -> None:
+    make_device(session)
+    r = client.post(
+        "/api/devices/1/photo",
+        files={"file": ("doc.txt", b"hello", "text/plain")},
+    )
+    assert r.status_code == 400
+
+
+def test_upload_photo_too_large(client: TestClient, session: Session, tmp_path: object) -> None:
+    from unittest.mock import patch
+
+    make_device(session)
+    big = _jpeg_bytes(6 * 1024 * 1024)  # 6 MB
+
+    with patch("app.api.devices.settings") as mock_settings:
+        mock_settings.photos_dir = tmp_path  # type: ignore[attr-defined]
+        r = client.post(
+            "/api/devices/1/photo",
+            files={"file": ("big.jpg", big, "image/jpeg")},
+        )
+
+    assert r.status_code == 413
+
+
+def test_upload_photo_device_not_found(client: TestClient) -> None:
+    r = client.post(
+        "/api/devices/99/photo",
+        files={"file": ("device.jpg", _jpeg_bytes(), "image/jpeg")},
+    )
+    assert r.status_code == 404
+
+
+def test_get_photo_no_photo(client: TestClient, session: Session) -> None:
+    make_device(session)
+    assert client.get("/api/devices/1/photo").status_code == 404
+
+
+def test_get_photo_ok(client: TestClient, session: Session, tmp_path: object) -> None:
+    from unittest.mock import patch
+
+    make_device(session)
+
+    with patch("app.api.devices.settings") as mock_settings:
+        mock_settings.photos_dir = tmp_path  # type: ignore[attr-defined]
+        client.post(
+            "/api/devices/1/photo",
+            files={"file": ("device.jpg", _jpeg_bytes(), "image/jpeg")},
+        )
+
+    # photo_path is now set on device in DB — find the file path
+    from app.models.device import Device as DevModel
+
+    dev = session.get(DevModel, 1)
+    assert dev is not None and dev.photo_path is not None
+
+    # Patch os.path.isfile to return True and FileResponse to use the real path
+    r = client.get("/api/devices/1/photo")
+    # The file was written by the upload; GET should succeed
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("image/jpeg")
+
+
+def test_delete_photo_ok(client: TestClient, session: Session, tmp_path: object) -> None:
+    from unittest.mock import patch
+
+    make_device(session)
+
+    with patch("app.api.devices.settings") as mock_settings:
+        mock_settings.photos_dir = tmp_path  # type: ignore[attr-defined]
+        client.post(
+            "/api/devices/1/photo",
+            files={"file": ("device.jpg", _jpeg_bytes(), "image/jpeg")},
+        )
+
+    r = client.delete("/api/devices/1/photo")
+    assert r.status_code == 200
+    assert r.json()["photo_path"] is None
+
+
+def test_delete_photo_no_photo(client: TestClient, session: Session) -> None:
+    make_device(session)
+    r = client.delete("/api/devices/1/photo")
+    assert r.status_code == 200
+    assert r.json()["photo_path"] is None
+
+
+def test_delete_photo_not_found(client: TestClient) -> None:
+    assert client.delete("/api/devices/99/photo").status_code == 404

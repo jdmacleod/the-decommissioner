@@ -23,6 +23,7 @@ class Device(DeviceBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
     stage: DeviceStage = DeviceStage.registered
     staging_path: str | None = None
+    photo_path: str | None = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -39,6 +40,7 @@ class DeviceRead(DeviceBase):
     id: int
     stage: DeviceStage
     staging_path: str | None = None
+    photo_path: str | None = None
     created_at: datetime
     updated_at: datetime
 
