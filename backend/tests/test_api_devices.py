@@ -434,16 +434,128 @@ def test_detect_volumes_on_darwin(client: TestClient, monkeypatch: pytest.Monkey
     import unittest.mock as mock
 
     monkeypatch.setattr("app.api.devices.sys.platform", "darwin")
+    # Macintosh HD is a symlink to / on macOS and must be excluded.
     with (
-        mock.patch("app.api.devices.os.listdir", return_value=["Macintosh HD", ".hidden"]),
+        mock.patch(
+            "app.api.devices.os.listdir", return_value=["USB Drive", "Macintosh HD", ".hidden"]
+        ),
         mock.patch("app.api.devices.os.path.isdir", return_value=True),
+        mock.patch("app.api.devices.os.path.islink", side_effect=lambda p: "Macintosh HD" in p),
     ):
         r = client.get("/api/devices/detect-volumes")
     assert r.status_code == 200
     data = r.json()
     labels = [e["label"] for e in data]
     assert ".hidden" not in labels
-    assert "Macintosh HD" in labels
+    assert "Macintosh HD" not in labels  # symlink to / — excluded
+    assert "USB Drive" in labels
+
+
+def test_detect_volumes_linux_with_volumes_dir(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Docker on macOS: /Volumes is bind-mounted, sys.platform is linux."""
+    import unittest.mock as mock
+
+    monkeypatch.setattr("app.api.devices.sys.platform", "linux")
+
+    def fake_listdir(path: str) -> list[str]:
+        if path == "/Volumes":
+            return ["LEXAR128", "LaCie"]
+        return []  # /media and /mnt are empty
+
+    def fake_isdir(path: str) -> bool:
+        return path in ("/Volumes", "/Volumes/LEXAR128", "/Volumes/LaCie", "/media", "/mnt")
+
+    with (
+        mock.patch("app.api.devices.os.listdir", side_effect=fake_listdir),
+        mock.patch("app.api.devices.os.path.isdir", side_effect=fake_isdir),
+        mock.patch("app.api.devices.os.path.islink", return_value=False),
+    ):
+        r = client.get("/api/devices/detect-volumes")
+    assert r.status_code == 200
+    data = r.json()
+    labels = [e["label"] for e in data]
+    assert "LEXAR128" in labels
+    assert "LaCie" in labels
+
+
+def test_detect_volumes_serial_darwin(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """macOS: diskutil returns a plist with VolumeUUID — serial_number is populated."""
+    import plistlib
+    import unittest.mock as mock
+
+    monkeypatch.setattr("app.api.devices.sys.platform", "darwin")
+
+    fake_plist = plistlib.dumps(
+        {"VolumeUUID": "AABBCCDD-1234-5678-ABCD-EEFF00112233", "VolumeName": "USB Drive"}
+    )
+    diskutil_result = mock.MagicMock()
+    diskutil_result.returncode = 0
+    diskutil_result.stdout = fake_plist
+
+    with (
+        mock.patch("app.api.devices.os.listdir", return_value=["USB Drive"]),
+        mock.patch("app.api.devices.os.path.isdir", return_value=True),
+        mock.patch("app.api.devices.os.path.islink", return_value=False),
+        mock.patch("app.api.devices.subprocess.run", return_value=diskutil_result),
+    ):
+        r = client.get("/api/devices/detect-volumes")
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data) == 1
+    assert data[0]["serial_number"] == "AABBCCDD-1234-5678-ABCD-EEFF00112233"
+
+
+def test_detect_volumes_serial_darwin_media_serial_takes_priority(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """macOS: MediaSerialNumber takes priority over VolumeUUID when both are present."""
+    import plistlib
+    import unittest.mock as mock
+
+    monkeypatch.setattr("app.api.devices.sys.platform", "darwin")
+
+    fake_plist = plistlib.dumps(
+        {
+            "MediaSerialNumber": "WX11A1234567",
+            "VolumeUUID": "AABBCCDD-1234-5678-ABCD-EEFF00112233",
+        }
+    )
+    diskutil_result = mock.MagicMock()
+    diskutil_result.returncode = 0
+    diskutil_result.stdout = fake_plist
+
+    with (
+        mock.patch("app.api.devices.os.listdir", return_value=["My Drive"]),
+        mock.patch("app.api.devices.os.path.isdir", return_value=True),
+        mock.patch("app.api.devices.os.path.islink", return_value=False),
+        mock.patch("app.api.devices.subprocess.run", return_value=diskutil_result),
+    ):
+        r = client.get("/api/devices/detect-volumes")
+    assert r.status_code == 200
+    assert r.json()[0]["serial_number"] == "WX11A1234567"
+
+
+def test_detect_volumes_serial_failure_returns_null(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """If serial detection subprocess raises, serial_number is null and response succeeds."""
+    import unittest.mock as mock
+
+    monkeypatch.setattr("app.api.devices.sys.platform", "darwin")
+
+    with (
+        mock.patch("app.api.devices.os.listdir", return_value=["USB Drive"]),
+        mock.patch("app.api.devices.os.path.isdir", return_value=True),
+        mock.patch("app.api.devices.os.path.islink", return_value=False),
+        mock.patch("app.api.devices.subprocess.run", side_effect=Exception("diskutil not found")),
+    ):
+        r = client.get("/api/devices/detect-volumes")
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data) == 1
+    assert data[0]["serial_number"] is None
 
 
 # ── photo upload / serve / delete ────────────────────────────────────────────

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createDevice, detectIos, detectVolumes, uploadDevicePhoto } from '../lib/api'
 import { PhotoUpload } from '../components/PhotoUpload'
-import type { DeviceType } from '../types/api'
+import type { DeviceType, VolumeEntry } from '../types/api'
 
 const DEVICE_TYPES: { value: DeviceType; label: string }[] = [
   { value: 'mac', label: 'Mac' },
@@ -27,7 +27,7 @@ export function AddDevice() {
   const [notes, setNotes] = useState('')
   const [photo, setPhoto] = useState<File | null>(null)
   const [detectError, setDetectError] = useState<string | null>(null)
-  const [volumes, setVolumes] = useState<{ path: string; label: string }[]>([])
+  const [volumes, setVolumes] = useState<VolumeEntry[]>([])
   const [volumeScanDone, setVolumeScanDone] = useState(false)
 
   const mutation = useMutation({
@@ -65,6 +65,7 @@ export function AddDevice() {
       setVolumeScanDone(true)
       if (result.length > 0 && !sourcePath) {
         setSourcePath(result[0].path)
+        if (result[0].serial_number) setSerialNumber(result[0].serial_number)
       }
     },
     onError: () => {
@@ -157,7 +158,11 @@ export function AddDevice() {
             {isVolumeBased && volumeScanDone && volumes.length > 0 ? (
               <select
                 value={sourcePath}
-                onChange={(e) => setSourcePath(e.target.value)}
+                onChange={(e) => {
+                  const selected = volumes.find((v) => v.path === e.target.value)
+                  setSourcePath(e.target.value)
+                  if (selected?.serial_number) setSerialNumber(selected.serial_number)
+                }}
                 className="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono"
               >
                 {volumes.map((v) => (

@@ -1,6 +1,7 @@
 import asyncio
 import contextlib
 import os
+import subprocess
 import sys
 from datetime import datetime
 from typing import Annotated
@@ -62,6 +63,55 @@ def detect_ios() -> dict:
 class VolumeEntry(BaseModel):
     path: str
     label: str
+    serial_number: str | None = None
+
+
+def _serial_for_path(path: str) -> str | None:
+    """Best-effort: return a hardware serial or Volume UUID for a mounted volume."""
+    if sys.platform == "darwin":
+        try:
+            import plistlib
+
+            r = subprocess.run(["diskutil", "info", "-plist", path], capture_output=True, timeout=5)
+            if r.returncode == 0:
+                info = plistlib.loads(r.stdout)
+                # MediaSerialNumber is present for drives that report a hardware serial;
+                # VolumeUUID is always present for formatted volumes as a reliable fallback.
+                return info.get("MediaSerialNumber") or info.get("VolumeUUID")
+        except Exception:
+            pass
+        return None
+    else:
+        try:
+            src = subprocess.run(
+                ["findmnt", "-n", "-o", "SOURCE", path],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            device = src.stdout.strip()
+            if src.returncode != 0 or not device:
+                return None
+            # Try hardware serial from the block device
+            serial_r = subprocess.run(
+                ["lsblk", "-dno", "SERIAL", device],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            serial = serial_r.stdout.strip()
+            if serial and serial.strip("0"):  # skip all-zero placeholder serials
+                return serial
+            # Fall back to filesystem UUID
+            uuid_r = subprocess.run(
+                ["lsblk", "-no", "UUID", device],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            return uuid_r.stdout.strip() or None
+        except Exception:
+            return None
 
 
 @router.get("/detect-volumes", response_model=list[VolumeEntry])
@@ -69,17 +119,36 @@ def detect_volumes() -> list[VolumeEntry]:
     """Return a list of mounted volumes suitable for use as a source path."""
     results: list[VolumeEntry] = []
     if sys.platform == "darwin":
-        base = "/Volumes"
+        # Native macOS: real volumes live in /Volumes. Exclude symlinks — macOS
+        # creates /Volumes/Macintosh HD as a symlink to / which is not a device.
         try:
-            for name in sorted(os.listdir(base)):
+            for name in sorted(os.listdir("/Volumes")):
                 if name.startswith("."):
                     continue
-                path = os.path.join(base, name)
-                if os.path.isdir(path):
-                    results.append(VolumeEntry(path=path, label=name))
+                path = os.path.join("/Volumes", name)
+                if os.path.isdir(path) and not os.path.islink(path):
+                    results.append(
+                        VolumeEntry(path=path, label=name, serial_number=_serial_for_path(path))
+                    )
         except OSError:
             pass
     else:
+        # Linux (native or Docker on macOS with /Volumes bind-mounted).
+        # Check /Volumes first: present when the Docker backend runs on a macOS
+        # host and docker-compose maps /Volumes:/Volumes:ro into the container.
+        if os.path.isdir("/Volumes"):
+            try:
+                for name in sorted(os.listdir("/Volumes")):
+                    if name.startswith("."):
+                        continue
+                    path = os.path.join("/Volumes", name)
+                    if os.path.isdir(path) and not os.path.islink(path):
+                        results.append(
+                            VolumeEntry(path=path, label=name, serial_number=_serial_for_path(path))
+                        )
+            except OSError:
+                pass
+
         for base in ("/media", "/mnt"):
             try:
                 for entry in sorted(os.listdir(base)):
@@ -92,9 +161,21 @@ def detect_volumes() -> list[VolumeEntry]:
                             for name in sorted(sub):
                                 path = os.path.join(candidate, name)
                                 if os.path.isdir(path):
-                                    results.append(VolumeEntry(path=path, label=name))
+                                    results.append(
+                                        VolumeEntry(
+                                            path=path,
+                                            label=name,
+                                            serial_number=_serial_for_path(path),
+                                        )
+                                    )
                         else:
-                            results.append(VolumeEntry(path=candidate, label=entry))
+                            results.append(
+                                VolumeEntry(
+                                    path=candidate,
+                                    label=entry,
+                                    serial_number=_serial_for_path(candidate),
+                                )
+                            )
             except OSError:
                 pass
     return results

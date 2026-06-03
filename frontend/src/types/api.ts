@@ -129,6 +129,12 @@ export interface IosDetectResult {
   serial: string | null
 }
 
+export interface VolumeEntry {
+  path: string
+  label: string
+  serial_number: string | null
+}
+
 export interface ChecklistItem {
   label: string
   done: boolean

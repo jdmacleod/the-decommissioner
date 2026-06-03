@@ -2,7 +2,7 @@ import type {
   Device, DeviceCreate, Job, Dependency,
   FileEntryPage, DuplicateGroup, DupStats, FileStatus,
   StorageTarget, StorageTargetCreate, Snapshot, IosDetectResult, StorageBackend,
-  VerifyDiff,
+  VerifyDiff, VolumeEntry,
 } from '../types/api'
 
 const BASE = '/api'
@@ -150,7 +150,7 @@ export const clearStaging = (deviceId: number) =>
 
 // Detect mounted volumes (for HDD/USB source path selection)
 export const detectVolumes = () =>
-  request<{ path: string; label: string }[]>('/devices/detect-volumes')
+  request<VolumeEntry[]>('/devices/detect-volumes')
 
 // Device photos
 export const getDevicePhotoUrl = (deviceId: number) => `${BASE}/devices/${deviceId}/photo`

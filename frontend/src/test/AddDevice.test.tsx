@@ -220,4 +220,30 @@ describe('AddDevice form', () => {
     await waitFor(() => expect(createDevice).toHaveBeenCalled())
     // Should still navigate (no unhandled error)
   })
+
+  it('auto-fills serial number from first volume when scan completes', async () => {
+    vi.mocked(detectVolumes).mockResolvedValue([
+      { path: '/Volumes/LEXAR128', label: 'LEXAR128', serial_number: 'AABBCCDD-1234-5678' },
+    ])
+    renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
+    await userEvent.click(screen.getByRole('button', { name: /scan volumes/i }))
+    // Wait for the serial number to appear in one of the text inputs
+    await waitFor(() => {
+      const textboxes = screen.getAllByRole('textbox') as HTMLInputElement[]
+      expect(textboxes.some((el) => el.value === 'AABBCCDD-1234-5678')).toBe(true)
+    })
+  })
+
+  it('leaves serial field unchanged when scanned volume has no serial', async () => {
+    vi.mocked(detectVolumes).mockResolvedValue([
+      { path: '/Volumes/LaCie', label: 'LaCie', serial_number: null },
+    ])
+    renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
+    await userEvent.click(screen.getByRole('button', { name: /scan volumes/i }))
+    await waitFor(() => expect(detectVolumes).toHaveBeenCalled())
+    // Serial number field should remain empty
+    const serialInputs = screen.getAllByRole('textbox') as HTMLInputElement[]
+    const serialInput = serialInputs.find((el) => el.placeholder === '' || el.value !== '/Volumes/LaCie')
+    expect(serialInput?.value ?? '').toBe('')
+  })
 })
