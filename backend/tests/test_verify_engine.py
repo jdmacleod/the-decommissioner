@@ -152,3 +152,161 @@ async def test_run_verify_handles_subprocess_exception(
     with patch("app.engines.verify.subprocess.run", side_effect=OSError("not found")):
         # Should not raise
         await run_verify(job.id, device, target, session, runner)
+
+
+def _ls_result(paths: list[str]) -> MagicMock:
+    """Build a mock restic ls --json result with the given file paths."""
+    lines = "\n".join(
+        json.dumps({"type": "file", "path": p, "name": p.split("/")[-1]}) for p in paths
+    )
+    r = MagicMock(spec=subprocess.CompletedProcess)
+    r.returncode = 0
+    r.stdout = lines
+    return r
+
+
+def _snapshots_result() -> MagicMock:
+    r = MagicMock(spec=subprocess.CompletedProcess)
+    r.returncode = 0
+    r.stdout = json.dumps([{"short_id": "abc12345", "time": "2024-01-01T00:00:00Z"}])
+    return r
+
+
+async def test_run_verify_no_discrepancy_writes_metadata(
+    session: Session, runner, monkeypatch
+) -> None:
+    from app.models.file_entry import FileEntry
+    from app.models.job import Job
+
+    device = make_device(session)
+    job = make_job(session, device.id)
+    target = make_storage_target(session)
+    make_snapshot(session, device.id, job.id, target.id)
+
+    for fname in ("file1.txt", "file2.txt"):
+        session.add(
+            FileEntry(
+                device_id=device.id,
+                path=f"/source/{fname}",
+                relative_path=fname,
+                size_bytes=100,
+                sha256="abc",
+                mtime=datetime.utcnow(),
+                status=FileStatus.migrated,
+            )
+        )
+    session.commit()
+
+    async def fake_run(job_id, cmd, **kwargs):
+        yield "check passed\n"
+
+    monkeypatch.setattr(runner, "run", fake_run)
+
+    with patch(
+        "app.engines.verify.subprocess.run",
+        side_effect=[_snapshots_result(), _ls_result(["/source/file1.txt", "/source/file2.txt"])],
+    ):
+        await run_verify(job.id, device, target, session, runner)
+
+    session.expire_all()
+    job_row = session.get(Job, job.id)
+    assert job_row is not None and job_row.job_metadata is not None
+    data = json.loads(job_row.job_metadata)
+    assert data["discrepancy"] is False
+    assert data["catalog_count"] == 2
+    assert data["snapshot_count"] == 2
+    assert data["missing_paths"] == []
+
+
+async def test_run_verify_discrepancy_writes_missing_paths(
+    session: Session, runner, monkeypatch
+) -> None:
+    from app.models.file_entry import FileEntry
+    from app.models.job import Job
+
+    device = make_device(session)
+    job = make_job(session, device.id)
+    target = make_storage_target(session)
+    make_snapshot(session, device.id, job.id, target.id)
+
+    for fname in ("keep.txt", "missing.txt"):
+        session.add(
+            FileEntry(
+                device_id=device.id,
+                path=f"/source/{fname}",
+                relative_path=fname,
+                size_bytes=100,
+                sha256="abc",
+                mtime=datetime.utcnow(),
+                status=FileStatus.migrated,
+            )
+        )
+    session.commit()
+
+    async def fake_run(job_id, cmd, **kwargs):
+        yield "check passed\n"
+
+    monkeypatch.setattr(runner, "run", fake_run)
+
+    # restic ls only returns keep.txt — missing.txt is absent from snapshot
+    with patch(
+        "app.engines.verify.subprocess.run",
+        side_effect=[_snapshots_result(), _ls_result(["/source/keep.txt"])],
+    ):
+        await run_verify(job.id, device, target, session, runner)
+
+    session.expire_all()
+    job_row = session.get(Job, job.id)
+    assert job_row is not None and job_row.job_metadata is not None
+    data = json.loads(job_row.job_metadata)
+    assert data["discrepancy"] is True
+    assert data["catalog_count"] == 2
+    assert data["snapshot_count"] == 1
+    assert data["missing_paths"] == ["/source/missing.txt"]
+
+
+async def test_run_verify_ls_failure_assumes_no_discrepancy(
+    session: Session, runner, monkeypatch
+) -> None:
+    from app.models.file_entry import FileEntry
+    from app.models.job import Job
+
+    device = make_device(session)
+    job = make_job(session, device.id)
+    target = make_storage_target(session)
+    make_snapshot(session, device.id, job.id, target.id)
+
+    session.add(
+        FileEntry(
+            device_id=device.id,
+            path="/source/file.txt",
+            relative_path="file.txt",
+            size_bytes=100,
+            sha256="abc",
+            mtime=datetime.utcnow(),
+            status=FileStatus.migrated,
+        )
+    )
+    session.commit()
+
+    async def fake_run(job_id, cmd, **kwargs):
+        yield "check passed\n"
+
+    monkeypatch.setattr(runner, "run", fake_run)
+
+    ls_fail = MagicMock(spec=subprocess.CompletedProcess)
+    ls_fail.returncode = 1
+    ls_fail.stdout = ""
+
+    with patch(
+        "app.engines.verify.subprocess.run",
+        side_effect=[_snapshots_result(), ls_fail],
+    ):
+        await run_verify(job.id, device, target, session, runner)
+
+    session.expire_all()
+    job_row = session.get(Job, job.id)
+    assert job_row is not None and job_row.job_metadata is not None
+    data = json.loads(job_row.job_metadata)
+    assert data["discrepancy"] is False
+    assert data["missing_paths"] == []

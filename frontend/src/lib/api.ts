@@ -2,6 +2,7 @@ import type {
   Device, DeviceCreate, Job, Dependency,
   FileEntryPage, DuplicateGroup, DupStats, FileStatus,
   StorageTarget, StorageTargetCreate, Snapshot, IosDetectResult, StorageBackend,
+  VerifyDiff,
 } from '../types/api'
 
 const BASE = '/api'
@@ -106,6 +107,9 @@ export const initStorageTarget = (id: number) =>
 // Snapshots
 export const getSnapshots = (deviceId: number) =>
   request<Snapshot[]>(`/devices/${deviceId}/snapshots`)
+
+export const getVerifyDiff = (deviceId: number) =>
+  request<VerifyDiff>(`/devices/${deviceId}/verify-diff`)
 
 // Device jobs
 export const getDeviceJobs = (deviceId: number) =>

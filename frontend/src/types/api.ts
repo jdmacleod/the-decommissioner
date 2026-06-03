@@ -152,3 +152,10 @@ export interface Snapshot {
   taken_at: string
   verified_at: string | null
 }
+
+export interface VerifyDiff {
+  discrepancy: boolean
+  catalog_count: number
+  snapshot_count: number
+  missing_paths: string[]
+}
