@@ -10,19 +10,13 @@ import {
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { getDevice, getFileEntries, bulkUpdateFileStatus } from '../lib/api'
 import type { FileEntry, FileStatus } from '../types/api'
+import { formatBytes } from '../lib/utils'
 
 const STATUS_OPTIONS: { value: FileStatus; label: string; color: string }[] = [
   { value: 'pending',  label: 'Pending', color: 'text-gray-500' },
   { value: 'keep',     label: 'Keep',    color: 'text-green-700' },
   { value: 'discard',  label: 'Discard', color: 'text-red-600' },
 ]
-
-function formatBytes(n: number) {
-  if (n < 1024) return `${n} B`
-  if (n < 1024 ** 2) return `${(n / 1024).toFixed(1)} KB`
-  if (n < 1024 ** 3) return `${(n / 1024 ** 2).toFixed(1)} MB`
-  return `${(n / 1024 ** 3).toFixed(2)} GB`
-}
 
 const PAGE_SIZE = 500
 

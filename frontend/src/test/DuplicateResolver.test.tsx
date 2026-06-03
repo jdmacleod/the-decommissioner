@@ -12,6 +12,14 @@ vi.mock('../lib/api', () => ({
   autoResolveGroups: vi.fn(),
 }))
 
+vi.mock('../pages/DuplicateTriageMode', () => ({
+  DuplicateTriageMode: ({ onClose }: { onClose: () => void }) => (
+    <div data-testid="triage-overlay">
+      <button onClick={onClose}>Exit triage</button>
+    </div>
+  ),
+}))
+
 import { getDevice, getDuplicateGroups, getDupStats, resolveGroup, autoResolveGroups } from '../lib/api'
 
 const mockDevice = {
@@ -138,5 +146,27 @@ describe('DuplicateResolver', () => {
     vi.mocked(getDupStats).mockResolvedValue({ total: 3, resolved: 3, unresolved: 0 })
     renderWithProviders(<DuplicateResolver />, { initialPath: '/devices/1/duplicates', routePath: '/devices/:id/duplicates' })
     await waitFor(() => expect(screen.getByRole('button', { name: /Continue to Migration/i })).toBeInTheDocument())
+  })
+
+  it('shows Keyboard triage button in header', async () => {
+    renderWithProviders(<DuplicateResolver />, { initialPath: '/devices/1/duplicates', routePath: '/devices/:id/duplicates' })
+    await waitFor(() => screen.getByText('/data/file_a.txt'))
+    expect(screen.getByRole('button', { name: /keyboard triage/i })).toBeInTheDocument()
+  })
+
+  it('clicking Keyboard triage button mounts the triage overlay', async () => {
+    renderWithProviders(<DuplicateResolver />, { initialPath: '/devices/1/duplicates', routePath: '/devices/:id/duplicates' })
+    await waitFor(() => screen.getByText('/data/file_a.txt'))
+    await userEvent.click(screen.getByRole('button', { name: /keyboard triage/i }))
+    expect(screen.getByTestId('triage-overlay')).toBeInTheDocument()
+  })
+
+  it('triage overlay is dismissed when onClose is called', async () => {
+    renderWithProviders(<DuplicateResolver />, { initialPath: '/devices/1/duplicates', routePath: '/devices/:id/duplicates' })
+    await waitFor(() => screen.getByText('/data/file_a.txt'))
+    await userEvent.click(screen.getByRole('button', { name: /keyboard triage/i }))
+    expect(screen.getByTestId('triage-overlay')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /exit triage/i }))
+    expect(screen.queryByTestId('triage-overlay')).not.toBeInTheDocument()
   })
 })

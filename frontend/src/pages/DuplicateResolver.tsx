@@ -3,12 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getDevice, getDuplicateGroups, getDupStats, resolveGroup, autoResolveGroups } from '../lib/api'
 import type { DuplicateGroup } from '../types/api'
-
-function formatBytes(n: number) {
-  if (n < 1024 ** 2) return `${(n / 1024).toFixed(1)} KB`
-  if (n < 1024 ** 3) return `${(n / 1024 ** 2).toFixed(1)} MB`
-  return `${(n / 1024 ** 3).toFixed(2)} GB`
-}
+import { formatBytes } from '../lib/utils'
+import { DuplicateTriageMode } from './DuplicateTriageMode'
 
 export function DuplicateResolver() {
   const { id } = useParams<{ id: string }>()
@@ -17,6 +13,7 @@ export function DuplicateResolver() {
   const queryClient = useQueryClient()
   const [cursor, setCursor] = useState(0)
   const [showUnresolvedOnly, setShowUnresolvedOnly] = useState(true)
+  const [triageOpen, setTriageOpen] = useState(false)
 
   const { data: device } = useQuery({
     queryKey: ['device', deviceId],
@@ -89,7 +86,24 @@ export function DuplicateResolver() {
         </Link>
         <span className="text-gray-300">/</span>
         <span className="text-sm font-medium text-gray-900">Resolve Duplicates</span>
+        <div className="ml-auto">
+          <button
+            onClick={() => setTriageOpen(true)}
+            disabled={groups.length === 0}
+            className="text-xs bg-gray-900 text-white px-3 py-1.5 rounded hover:bg-gray-700 disabled:opacity-40"
+          >
+            Keyboard triage ⌨
+          </button>
+        </div>
       </div>
+
+      {triageOpen && (
+        <DuplicateTriageMode
+          groups={groups}
+          deviceId={deviceId}
+          onClose={() => setTriageOpen(false)}
+        />
+      )}
 
       <div className="flex-1 overflow-auto p-6 max-w-3xl mx-auto w-full">
         {/* Stats + controls */}
