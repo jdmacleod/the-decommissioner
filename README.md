@@ -101,16 +101,11 @@ Two services are defined:
 | `backend` | built from `./backend/Dockerfile` | 8000 | FastAPI + uvicorn; SQLite on a named volume |
 | `frontend` | `nginx:alpine` | 3000 | Serves pre-compiled static files; proxies `/api` to backend |
 
-The frontend service mounts `./frontend/dist` — build it first:
-
 ```bash
-# Build the frontend (once, or after any frontend change)
-make build          # runs: cd frontend && npm run build
-
 # Set your restic password (never stored in the DB)
 export RESTIC_PASSWORD=your-repo-password
 
-# Start both services
+# Build and start both services
 docker-compose up --build
 ```
 
