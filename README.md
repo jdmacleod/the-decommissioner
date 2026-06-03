@@ -94,11 +94,35 @@ make dev-backend
 
 ## Docker
 
+Two services are defined:
+
+| Service | Image | Port | Notes |
+|---|---|---|---|
+| `backend` | built from `./backend/Dockerfile` | 8000 | FastAPI + uvicorn; SQLite on a named volume |
+| `frontend` | `nginx:alpine` | 3000 | Serves pre-compiled static files; proxies `/api` to backend |
+
+The frontend service mounts `./frontend/dist` — build it first:
+
 ```bash
+# Build the frontend (once, or after any frontend change)
+make build          # runs: cd frontend && npm run build
+
+# Set your restic password (never stored in the DB)
+export RESTIC_PASSWORD=your-repo-password
+
+# Start both services
 docker-compose up --build
 ```
 
-The backend and a nginx frontend are started together. The SQLite database and job logs live on a named volume (`decommissioner_data`).
+The UI is then available at [http://localhost:3000](http://localhost:3000) and the API at [http://localhost:8000](http://localhost:8000).
+
+The frontend service waits for the backend health check to pass before starting. The SQLite database and job logs are persisted on a named volume (`decommissioner_data`).
+
+To pass the restic password without exporting it in your shell, create a `.env` file in the project root:
+
+```
+RESTIC_PASSWORD=your-repo-password
+```
 
 ---
 
