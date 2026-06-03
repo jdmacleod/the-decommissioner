@@ -74,21 +74,21 @@ make dev-frontend   # http://localhost:5173
 
 ## Configuration
 
-All configuration is via environment variables (or a `.env` file in `backend/`):
+Copy `.env.example` to `.env` in the project root and edit as needed:
+
+```bash
+cp .env.example .env
+```
 
 | Variable | Default | Description |
 |---|---|---|
 | `DATA_DIR` | `~/.decommissioner` | SQLite DB, job logs, iOS staging dirs |
-| `HOST` | `127.0.0.1` | Bind host |
+| `HOST` | `127.0.0.1` | Bind host (`0.0.0.0` for Docker or LAN access) |
 | `PORT` | `8000` | Bind port |
-| `LOG_LEVEL` | `info` | Uvicorn log level |
+| `LOG_LEVEL` | `info` | Uvicorn log level (`debug`, `info`, `warning`, `error`) |
+| `RESTIC_PASSWORD` | *(required)* | Password for the default restic repository |
 
-**Restic password** — the app never stores your restic password. Set the name of the environment variable that holds it when configuring a storage target (default: `RESTIC_PASSWORD`). Export it before starting the service:
-
-```bash
-export RESTIC_PASSWORD=your-repo-password
-make dev-backend
-```
+**Restic password** — the app never stores your restic password. When you add a storage target in the UI you specify the *name* of the environment variable that holds the password (default: `RESTIC_PASSWORD`). The value is passed through to `restic` at runtime and never written to the database. To use multiple repositories with different passwords, define multiple variables (e.g. `RESTIC_PASSWORD_OFFSITE`) and set the matching name in each storage target's settings.
 
 ---
 
@@ -118,7 +118,7 @@ The UI is then available at [http://localhost:3000](http://localhost:3000) and t
 
 The frontend service waits for the backend health check to pass before starting. The SQLite database and job logs are persisted on a named volume (`decommissioner_data`).
 
-To pass the restic password without exporting it in your shell, create a `.env` file in the project root:
+To pass configuration without exporting variables in your shell, use a `.env` file (see [Configuration](#configuration) above). For Docker the minimum required entry is:
 
 ```
 RESTIC_PASSWORD=your-repo-password
