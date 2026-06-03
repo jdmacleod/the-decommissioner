@@ -121,6 +121,26 @@ RESTIC_PASSWORD=your-repo-password
 
 ---
 
+## Documentation
+
+| Document | Type | What's in it |
+|---|---|---|
+| [Tutorial: decommission your first drive](docs/tutorial-first-decommission.md) | Tutorial | End-to-end walkthrough from install to certificate |
+| [Keyboard triage](docs/keyboard-triage.md) | How-to + Reference | J/K/Space shortcuts, path heuristic, receipt screen |
+| [How to configure storage targets](docs/howto-storage-targets.md) | How-to | Local, SFTP, and S3 setup with troubleshooting |
+| [Stage and status reference](docs/reference-stages.md) | Reference | All stages, file statuses, job types, device types |
+| [Architecture explanation](docs/explanation-architecture.md) | Explanation | Why the FSM is one-way, why the log file drives SSE, why passwords stay in env vars |
+
+Design documents (internal spec, not end-user docs):
+
+| Document | Contents |
+|---|---|
+| [docs/data-models.md](docs/data-models.md) | SQLModel table definitions, enumerations, indexes |
+| [docs/subprocess-runner.md](docs/subprocess-runner.md) | Async runner, SSE streaming, job lifecycle |
+| [docs/ui-design.md](docs/ui-design.md) | UI layout, page components, API summary |
+
+---
+
 ## Development
 
 ```bash
