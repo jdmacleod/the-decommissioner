@@ -495,9 +495,10 @@ def check_dependencies(session: Session) -> list[Dependency]:
 
 ## Cancellation
 
-To cancel a running job, the API endpoint calls `proc.terminate()`. Since the runner
-holds the `proc` reference inside its coroutine, cancellation is mediated via a
-`CancellationToken` dict keyed by `job_id`:
+To cancel a running job, the client posts to `POST /api/jobs/{id}/cancel`.
+The endpoint calls `runner.cancel(job_id)`, which sets a cancellation flag.
+Since the runner holds the `proc` reference inside its coroutine, cancellation
+is mediated via an event dict keyed by `job_id`:
 
 ```python
 # In SubprocessRunner:
@@ -512,6 +513,25 @@ if self._cancel_flags.get(job_id, asyncio.Event()).is_set():
     proc.terminate()
     await self._set_status(job_id, JobStatus.cancelled)
     break
+```
+
+```python
+# backend/app/api/jobs.py
+
+@router.post("/{job_id}/cancel")
+async def cancel_job(job_id: int, request: Request, session: SessionDep):
+    """
+    Cancel a running job. Sets a flag checked by the runner after each output line.
+    Returns immediately — the job transitions to cancelled asynchronously.
+    """
+    job = session.get(Job, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if job.status not in (JobStatus.pending, JobStatus.in_progress):
+        raise HTTPException(status_code=409, detail="Job is not running")
+    runner = get_runner(request)
+    await runner.cancel(job_id)
+    return {"job_id": job_id, "status": "cancelling"}
 ```
 
 ---

@@ -127,8 +127,19 @@ class DeviceCreate(DeviceBase):
 class DeviceRead(DeviceBase):
     id: int
     stage: DeviceStage
+    staging_path: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+
+
+class DeviceUpdate(SQLModel):
+    name: Optional[str] = None
+    device_type: Optional[DeviceType] = None
+    source_path: Optional[str] = None
+    serial_number: Optional[str] = None
+    notes: Optional[str] = None
+    stage: Optional[DeviceStage] = None
+    staging_path: Optional[str] = None
 ```
 
 **Stage transition rules** (enforced in the API layer, not the DB):
@@ -184,8 +195,10 @@ class FileEntry(SQLModel, table=True):
     restic_snapshot_id: Optional[str] = None
 
     device: Optional[Device] = Relationship(back_populates="file_entries")
+    # foreign_keys must be explicit due to circular FK with DuplicateGroup.canonical_entry_id
     duplicate_group: Optional["DuplicateGroup"] = Relationship(
-        back_populates="entries"
+        back_populates="entries",
+        sa_relationship_kwargs={"foreign_keys": "[FileEntry.duplicate_group_id]"},
     )
 ```
 
@@ -260,10 +273,12 @@ class Job(SQLModel, table=True):
                     "Written by the runner; read back for SSE replay."
     )
     # JSON blob for job-specific config/results, e.g.:
-    # catalog: {"tool": "czkawka", "files_found": 48203, "duplicates_found": 1204}
+    # catalog: {"tool": "czkawka", "files_found": 48203, "dup_groups": 1204}
     # migrate: {"restic_snapshot_id": "abc123", "bytes_added": 10240000}
-    # wipe:    {"method": "nwipe", "passes": 3}
-    job_metadata: Optional[str] = Field(default=None, alias="metadata")
+    # verify:  {"discrepancy": false, "catalog_count": 46999, "snapshot_count": 46999, "missing_paths": []}
+    # wipe:    {"method": "nwipe DoD 5220.22-M (3 passes)", "block_device": "/dev/sdb"}
+    # wipe (Apple): {"checklist_items": [{"label": "Sign out of iCloud", "done": true}, ...]}
+    job_metadata: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     device: Optional[Device] = Relationship(back_populates="jobs")
@@ -354,6 +369,8 @@ Checked at startup and surfaced in the UI health screen.
 # backend/app/models/dependency.py
 
 class Dependency(SQLModel, table=True):
+    __table_args__ = (UniqueConstraint("name", name="uq_dependency_name"),)
+
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(
         description="Binary name, e.g. 'restic', 'czkawka', 'nwipe', 'ideviceinfo'"

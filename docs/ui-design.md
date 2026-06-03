@@ -119,7 +119,7 @@ renders the active stage component below it.
 ┌──────────────────────────────────────────────────────────────┐
 │  ← All Devices      Jason's 2019 MacBook Pro   [Mac]         │
 │                                                              │
-│  Catalog ──●── Analyze ──○── Migrate ──○── Wipe ──○── Done  │
+│  Catalog ──●── Analyze ──○── Migrate ──○── Verify ──○── Wipe ──○── Done  │
 │             ↑ current                                        │
 ├──────────────────────────────────────────────────────────────┤
 │                                                              │
@@ -293,23 +293,52 @@ Verification auto-starts as a follow-on job — no separate button needed.
 
 ## Stage Component: Verify
 
+**Sub-state: No discrepancy (happy path)**
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  Step 4: Verify                                              │
+│  Step 4 — Verify                                             │
+│                                                              │
+│  ✓ Migration and verification complete                       │
+│                                                              │
+│  Catalog     5,000 files                                     │
+│  In snapshot 5,000 files                                     │
+│  Difference  0 files ✓                                       │
+│                                                              │
+│  Snapshot    abc12345                                        │
+│  Total size  2.00 GB                                         │
+│  Added (net) 1.80 GB                                         │
 │                                                              │
 │  ✓ restic check passed — repository is consistent            │
-│  ✓ Snapshot a1b2c3d4 contains all expected files             │
-│                                                              │
-│  Catalog:    46,999 files  ·  118.7 GB                       │
-│  Snapshot:   46,999 files  ·  118.7 GB                       │
-│  Difference: 0 files  ·  0 bytes  ✓                          │
-│                                                              │
-│  [View snapshot contents ▾]         [Proceed to Wipe →]      │
 └──────────────────────────────────────────────────────────────┘
 ```
 
-If there's a discrepancy, the diff is shown as a filterable table of missing paths.
-User can re-run migration or manually resolve before proceeding.
+**Sub-state: Discrepancy detected**
+```
+┌──────────────────────────────────────────────────────────────┐
+│  Step 4 — Verify                                             │
+│                                                              │
+│  ⚠ Verification found 3 files not present in snapshot       │
+│                                                              │
+│  Catalog     5,000 files                                     │
+│  In snapshot 4,997 files                                     │
+│  Difference  3 files missing                                 │
+│                                                              │
+│  Missing files                         [Filter paths… ]      │
+│  ┌──────────────────────────────────────────────────────┐    │
+│  │ /Users/jason/Documents/report-final.pdf              │    │
+│  │ /Users/jason/Downloads/archive.zip                   │    │
+│  │ /Users/jason/Pictures/photo-001.jpg                  │    │
+│  └──────────────────────────────────────────────────────┘    │
+└──────────────────────────────────────────────────────────────┘
+```
+
+Discrepancy data comes from `GET /api/devices/:id/verify-diff`, which reads
+`job_metadata` from the latest completed verify job. The verify engine populates
+this by running `restic ls <snapshot_id> --json` after `restic check` and diffing
+the snapshot path list against migrated FileEntry paths.
+
+When a discrepancy exists, the user should review the missing paths and re-run
+migration manually if needed before proceeding to wipe.
 
 ---
 
@@ -487,21 +516,16 @@ export function JobLog({ jobId, height = "300px" }: JobLogProps) {
 // frontend/src/components/StageProgress.tsx
 
 const STAGES = [
-  { key: "catalog",  label: "Catalog"  },
-  { key: "migrate",  label: "Migrate"  },
-  { key: "verify",   label: "Verify"   },
-  { key: "wipe",     label: "Wipe"     },
-  { key: "recycled", label: "Done"     },
+  { label: "Catalog", stages: ["registered", "cataloging", "cataloged"] },
+  { label: "Analyze", stages: ["analyzing", "analyzed"] },
+  { label: "Migrate", stages: ["migrating", "migrated"] },
+  { label: "Verify",  stages: ["verifying", "verified"] },
+  { label: "Wipe",    stages: ["wiping", "wiped"] },
+  { label: "Done",    stages: ["recycled"] },
 ];
-
-const STAGE_INDEX: Record<DeviceStage, number> = {
-  registered: 0, cataloging: 0, cataloged: 0,
-  analyzing: 0, analyzed: 0,
-  migrating: 1, migrated: 1,
-  verifying: 2, verified: 2,
-  wiping: 3, wiped: 3,
-  recycled: 4,
-};
+// Each stage object groups the DeviceStage values that map to that step.
+// A step is "complete" when the device stage has moved past it,
+// "active" when it's in the step's list, and "pending" otherwise.
 ```
 
 ---
@@ -531,37 +555,46 @@ Devices:
   GET    /api/devices/:id
   PATCH  /api/devices/:id
   DELETE /api/devices/:id
-  GET    /api/devices/detect-ios        # ideviceinfo probe
-  POST   /api/devices/:id/jobs          # start a job (body: {job_type})
+  GET    /api/devices/detect-ios              # ideviceinfo probe → {available, name, serial}
+  GET    /api/devices/detect-volumes          # mounted volumes → [{path, label}]
+  POST   /api/devices/:id/jobs               # start a job (body: {job_type, storage_target_id?})
+  GET    /api/devices/:id/jobs               # list all jobs for a device
+  POST   /api/devices/:id/clear-staging      # delete iOS staging dir (post-catalog cleanup)
+  POST   /api/devices/:id/mark-wiped         # advance wiping → wiped (Apple checklist)
+  POST   /api/devices/:id/mark-recycled      # advance wiped → recycled
 
 File Entries:
-  GET    /api/devices/:id/files         # paginated, filterable
-  PATCH  /api/file-entries              # bulk status update
+  GET    /api/file-entries                   # paginated, filterable (?device_id, status, search)
+  PATCH  /api/file-entries                   # bulk status update (body: [{id, status}])
 
 Duplicate Groups:
-  GET    /api/devices/:id/duplicates    # paginated, filter by resolved
-  PATCH  /api/duplicate-groups/:id      # set canonical_entry_id, resolved=true
-  POST   /api/devices/:id/auto-resolve  # run auto-resolver
+  GET    /api/duplicate-groups               # ?device_id, ?resolved (bool)
+  PATCH  /api/duplicate-groups/:id           # set canonical_entry_id, resolved=true
+  POST   /api/duplicate-groups/:device_id/auto-resolve
+  GET    /api/duplicate-groups/stats/:device_id  # → {total, resolved, unresolved}
 
 Jobs:
   GET    /api/jobs/:id
-  GET    /api/jobs/:id/stream           # SSE
+  GET    /api/jobs/:id/stream                # SSE log stream
   POST   /api/jobs/:id/cancel
+  PATCH  /api/jobs/:id/checklist             # update Apple wipe checklist item (body: {index, done})
 
 Storage Targets:
   GET    /api/storage-targets
   POST   /api/storage-targets
   PATCH  /api/storage-targets/:id
-  POST   /api/storage-targets/:id/test
-  POST   /api/storage-targets/:id/init
+  DELETE /api/storage-targets/:id
+  POST   /api/storage-targets/:id/test       # runs restic snapshots → {ok, output}
+  POST   /api/storage-targets/:id/init       # runs restic init → {ok, output}
 
 Snapshots:
   GET    /api/devices/:id/snapshots
+  GET    /api/devices/:id/verify-diff        # → {discrepancy, catalog_count, snapshot_count, missing_paths}
 
 Dependencies:
   GET    /api/dependencies
-  POST   /api/dependencies/check        # re-run checker
+  POST   /api/dependencies/recheck           # re-run checker
 
 Certificates:
-  GET    /api/devices/:id/certificate   # returns PDF
+  GET    /api/devices/:id/certificate        # returns PDF
 ```
