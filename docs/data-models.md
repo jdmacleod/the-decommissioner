@@ -16,12 +16,13 @@ Database: **SQLite**, stored at `~/.decommissioner/db.sqlite` (or `DATA_DIR` env
 from enum import Enum
 
 class DeviceType(str, Enum):
-    mac        = "mac"          # macOS laptop or desktop
-    linux      = "linux"        # Linux machine
-    iphone     = "iphone"
-    ipad       = "ipad"
-    usb_drive  = "usb_drive"    # any USB flash/thumb drive
-    hard_drive = "hard_drive"   # bare HDD/SSD via enclosure or internal
+    mac            = "mac"            # macOS laptop or desktop
+    linux          = "linux"          # Linux machine
+    iphone         = "iphone"
+    ipad           = "ipad"
+    usb_drive      = "usb_drive"      # any USB flash/thumb drive
+    hard_drive     = "hard_drive"     # bare HDD/SSD via enclosure or internal
+    network_volume = "network_volume" # SMB/NFS/AFP/sshfs network share
 
 
 class DeviceStage(str, Enum):

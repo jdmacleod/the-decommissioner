@@ -392,6 +392,24 @@ Rendered differently based on `device.device_type`.
 "Mark as Wiped" enables only when all checklist items are checked.
 Checklist state persists in the DB as a JSON blob on the Job row.
 
+**For network volumes (out-of-band disconnect checklist):**
+```
+┌──────────────────────────────────────────────────────────────┐
+│  Step 5: Prepare for Recycling                               │
+│                                                              │
+│  Complete these steps before handing off the share.         │
+│                                                              │
+│  [ ] Backup complete and verified — all files accounted for  │
+│       in the restic snapshot                                 │
+│  [ ] Confirm the share owner has been notified and access    │
+│       is no longer needed                                    │
+│  [ ] Disconnect the share: Finder → right-click volume →    │
+│       Eject, or run `umount <path>`                          │
+│                                                              │
+│                              [Mark as Wiped →] (disabled)    │
+└──────────────────────────────────────────────────────────────┘
+```
+
 ---
 
 ## Stage Component: Recycle

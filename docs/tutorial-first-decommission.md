@@ -39,8 +39,10 @@ You should see a green confirmation after Init completes. If not, check [How to 
 1. Click **+ Add device** in the left sidebar (or the button on the Dashboard).
 2. Fill in:
    - **Name**: something recognizable, like "Jason's 2015 MacBook Air"
-   - **Type**: `hard_drive` for an external drive, `mac` if it's the internal drive from a Mac
+   - **Type**: `hard_drive` for an external drive, `mac` for a Mac's internal drive, or `network_volume` for a shared network folder (SMB, NFS, AFP)
    - **Source path**: the mount point, e.g. `/Volumes/OldDrive`
+
+   **Tip:** For USB drives and network volumes, click **Scan volumes** next to the source path field. The app detects mounted volumes and auto-fills the path and serial number.
 3. Optionally drag a photo onto the photo slot so you can identify the hardware at a glance.
 4. Click **Save**.
 

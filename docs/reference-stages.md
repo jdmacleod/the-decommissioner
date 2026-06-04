@@ -19,8 +19,8 @@ A device moves through these stages in order. The stage only moves forward — a
 | `migrated` | Migrate job completes | All `keep`-status files are in the restic snapshot. |
 | `verifying` | Verify job starts | `restic check` and snapshot diff running. |
 | `verified` | Verify job completes | Every cataloged file confirmed present in the snapshot. |
-| `wiping` | Wipe job starts | `nwipe` or Apple checklist in progress. |
-| `wiped` | Wipe job completes (HDD) or checklist finished (Apple) | Drive erased or Apple erase steps done. |
+| `wiping` | Wipe job starts | `nwipe`, Apple checklist, or network-volume disconnect checklist in progress. |
+| `wiped` | Wipe job completes (HDD) or checklist finished (Apple/network) | Drive erased, Apple erase steps done, or network share disconnected. |
 | `recycled` | User marks device recycled | Final state. Decommission certificate available. |
 
 **Re-catalog exception:** Running a new catalog job from `cataloged` resets the stage to `cataloged` and clears prior file entries. This is the only backward transition allowed.
@@ -51,7 +51,7 @@ Files stay `pending` until a duplicate group is resolved or the user explicitly 
 | `ios_extract` | `engines/ios.py` | `ideviceinfo`, `ifuse` | Extracts iOS device files to a staging directory via AFC |
 | `migrate` | `engines/migrate.py` | `restic backup` | Backs up all `keep`-status files to the configured storage target |
 | `verify` | `engines/verify.py` | `restic check`, `restic snapshots` | Confirms snapshot integrity and that every file is present |
-| `wipe` | `engines/wipe.py` | `nwipe` (HDD/Linux) | Wipes block device; Apple devices use an interactive checklist instead |
+| `wipe` | `engines/wipe.py` | `nwipe` (HDD/Linux) | Wipes block device; Apple devices and network volumes use an interactive out-of-band checklist instead |
 
 ---
 
@@ -77,6 +77,9 @@ Files stay `pending` until a duplicate group is resolved or the user explicitly 
 | `ipad` | None (extracted via AFC) | Yes | Apple checklist |
 | `usb_drive` | Mount point | No | `nwipe` (Linux only) |
 | `hard_drive` | Mount point | No | `nwipe` (Linux only) |
+| `network_volume` | Network mount (SMB, NFS, AFP, sshfs) | No | Out-of-band disconnect checklist |
+
+**Network volumes** (SMB/NFS/AFP shares, sshfs mounts) appear as regular mount points. The catalog, migrate, and verify pipeline treats them like any local path — no code changes needed. The wipe stage shows an out-of-band checklist (confirm backup, notify share owner, disconnect the share) instead of trying to erase a remote filesystem.
 
 ---
 
