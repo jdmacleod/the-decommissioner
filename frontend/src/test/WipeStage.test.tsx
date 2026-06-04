@@ -188,3 +188,43 @@ describe('WipeStage — Apple device', () => {
     await waitFor(() => screen.getByText(/loading checklist/i))
   })
 })
+
+// Regression: ISSUE-QA-001 — network_volume wipe stage showed log stream instead of checklist
+// Found by /qa on 2026-06-04
+// network_volume was missing from APPLE_TYPES in WipeStage.tsx
+describe('WipeStage — network_volume device', () => {
+  it('shows Begin Checklist button for verified network_volume device', async () => {
+    render(makeDevice({ device_type: 'network_volume', stage: 'verified', source_path: '/Volumes/MyShare' }))
+    await waitFor(() => screen.getByRole('button', { name: /begin checklist/i }))
+  })
+
+  it('does NOT show Start Wipe button for verified network_volume', async () => {
+    render(makeDevice({ device_type: 'network_volume', stage: 'verified', source_path: '/Volumes/MyShare' }))
+    await waitFor(() => screen.getByRole('button', { name: /begin checklist/i }))
+    expect(screen.queryByRole('button', { name: /start wipe/i })).not.toBeInTheDocument()
+  })
+
+  it('shows checklist items for wiping network_volume device', async () => {
+    vi.mocked(getDeviceJobs).mockResolvedValue([
+      makeWipeJob({
+        job_metadata: JSON.stringify({
+          method: 'apple_checklist',
+          checklist_items: [
+            { label: 'Backup complete and verified', done: false },
+            { label: 'Disconnect the share', done: false },
+          ],
+        }),
+      }),
+    ])
+    render(makeDevice({ device_type: 'network_volume', stage: 'wiping', source_path: '/Volumes/MyShare' }))
+    await waitFor(() => screen.getByText('Backup complete and verified'))
+    expect(screen.getByText('Disconnect the share')).toBeInTheDocument()
+    expect(screen.queryByTestId('job-log-10')).not.toBeInTheDocument()
+  })
+
+  it('shows Mark as Wiped button for wiping network_volume', async () => {
+    vi.mocked(getDeviceJobs).mockResolvedValue([makeWipeJob()])
+    render(makeDevice({ device_type: 'network_volume', stage: 'wiping', source_path: '/Volumes/MyShare' }))
+    await waitFor(() => screen.getByRole('button', { name: /mark as wiped/i }))
+  })
+})

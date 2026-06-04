@@ -4,7 +4,7 @@ import { getDeviceJobs, triggerJob, updateChecklist, markWiped } from '../lib/ap
 import { JobLog } from '../components/JobLog'
 import type { Device, WipeJobMetadata } from '../types/api'
 
-const APPLE_TYPES = ['mac', 'iphone', 'ipad'] as const
+const APPLE_TYPES = ['mac', 'iphone', 'ipad', 'network_volume'] as const
 type AppleType = (typeof APPLE_TYPES)[number]
 
 const isApple = (device: Device): device is Device & { device_type: AppleType } =>
