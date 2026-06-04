@@ -60,10 +60,51 @@ def detect_ios() -> dict:
     return detect_ios_device()
 
 
+_NETWORK_FS_TYPES = {"smbfs", "cifs", "nfs", "nfs4", "afpfs", "osxfusefs", "fuse.sshfs", "macfuse"}
+
+
 class VolumeEntry(BaseModel):
     path: str
     label: str
     serial_number: str | None = None
+    is_network_mount: bool = False
+
+
+def _get_mount_types() -> dict[str, str]:
+    """Return {mount_point: fs_type} by parsing `mount` output. Best-effort; returns {} on error."""
+    try:
+        r = subprocess.run(["mount"], capture_output=True, text=True, timeout=5)
+        if r.returncode != 0 or not isinstance(r.stdout, str):
+            return {}
+        result: dict[str, str] = {}
+        for line in r.stdout.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            # Linux: "<device> on <mount> type <fstype> (<opts>)"
+            if " type " in line:
+                on_split = line.split(" on ", 1)
+                if len(on_split) == 2:
+                    after_on = on_split[1]
+                    type_split = after_on.split(" type ", 1)
+                    if len(type_split) == 2:
+                        mount = type_split[0].strip()
+                        fs_part = type_split[1].split("(", 1)[0].strip()
+                        result[mount] = fs_part
+            # macOS: "<device> on <mount> (<fstype>, <opts>...)"
+            elif " on " in line and "(" in line:
+                on_split = line.split(" on ", 1)
+                if len(on_split) == 2:
+                    rest = on_split[1]
+                    paren_idx = rest.rfind(" (")
+                    if paren_idx != -1:
+                        mount = rest[:paren_idx].strip()
+                        opts = rest[paren_idx + 2 :].rstrip(")")
+                        fs_type = opts.split(",")[0].strip()
+                        result[mount] = fs_type
+        return result
+    except Exception:
+        return {}
 
 
 def _serial_for_path(path: str) -> str | None:
@@ -117,7 +158,18 @@ def _serial_for_path(path: str) -> str | None:
 @router.get("/detect-volumes", response_model=list[VolumeEntry])
 def detect_volumes() -> list[VolumeEntry]:
     """Return a list of mounted volumes suitable for use as a source path."""
+    mount_types = _get_mount_types()
     results: list[VolumeEntry] = []
+
+    def _make_entry(path: str, label: str) -> VolumeEntry:
+        fs_type = mount_types.get(path, "")
+        return VolumeEntry(
+            path=path,
+            label=label,
+            serial_number=_serial_for_path(path),
+            is_network_mount=fs_type in _NETWORK_FS_TYPES,
+        )
+
     if sys.platform == "darwin":
         # Native macOS: real volumes live in /Volumes. Exclude symlinks — macOS
         # creates /Volumes/Macintosh HD as a symlink to / which is not a device.
@@ -127,9 +179,7 @@ def detect_volumes() -> list[VolumeEntry]:
                     continue
                 path = os.path.join("/Volumes", name)
                 if os.path.isdir(path) and not os.path.islink(path):
-                    results.append(
-                        VolumeEntry(path=path, label=name, serial_number=_serial_for_path(path))
-                    )
+                    results.append(_make_entry(path, name))
         except OSError:
             pass
     else:
@@ -143,9 +193,7 @@ def detect_volumes() -> list[VolumeEntry]:
                         continue
                     path = os.path.join("/Volumes", name)
                     if os.path.isdir(path) and not os.path.islink(path):
-                        results.append(
-                            VolumeEntry(path=path, label=name, serial_number=_serial_for_path(path))
-                        )
+                        results.append(_make_entry(path, name))
             except OSError:
                 pass
 
@@ -161,21 +209,9 @@ def detect_volumes() -> list[VolumeEntry]:
                             for name in sorted(sub):
                                 path = os.path.join(candidate, name)
                                 if os.path.isdir(path):
-                                    results.append(
-                                        VolumeEntry(
-                                            path=path,
-                                            label=name,
-                                            serial_number=_serial_for_path(path),
-                                        )
-                                    )
+                                    results.append(_make_entry(path, name))
                         else:
-                            results.append(
-                                VolumeEntry(
-                                    path=candidate,
-                                    label=entry,
-                                    serial_number=_serial_for_path(candidate),
-                                )
-                            )
+                            results.append(_make_entry(candidate, entry))
             except OSError:
                 pass
     return results

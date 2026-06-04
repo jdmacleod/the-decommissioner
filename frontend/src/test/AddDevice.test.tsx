@@ -165,7 +165,7 @@ describe('AddDevice form', () => {
 
   it('shows volumes dropdown when volumes are found', async () => {
     vi.mocked(detectVolumes).mockResolvedValue([
-      { path: '/Volumes/MyDisk', label: 'MyDisk' },
+      { path: '/Volumes/MyDisk', label: 'MyDisk', serial_number: null, is_network_mount: false },
     ])
     renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
     await userEvent.click(screen.getByRole('button', { name: /scan volumes/i }))
@@ -223,7 +223,7 @@ describe('AddDevice form', () => {
 
   it('auto-fills serial number from first volume when scan completes', async () => {
     vi.mocked(detectVolumes).mockResolvedValue([
-      { path: '/Volumes/LEXAR128', label: 'LEXAR128', serial_number: 'AABBCCDD-1234-5678' },
+      { path: '/Volumes/LEXAR128', label: 'LEXAR128', serial_number: 'AABBCCDD-1234-5678', is_network_mount: false },
     ])
     renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
     await userEvent.click(screen.getByRole('button', { name: /scan volumes/i }))
@@ -236,7 +236,7 @@ describe('AddDevice form', () => {
 
   it('leaves serial field unchanged when scanned volume has no serial', async () => {
     vi.mocked(detectVolumes).mockResolvedValue([
-      { path: '/Volumes/LaCie', label: 'LaCie', serial_number: null },
+      { path: '/Volumes/LaCie', label: 'LaCie', serial_number: null, is_network_mount: false },
     ])
     renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
     await userEvent.click(screen.getByRole('button', { name: /scan volumes/i }))
@@ -245,5 +245,31 @@ describe('AddDevice form', () => {
     const serialInputs = screen.getAllByRole('textbox') as HTMLInputElement[]
     const serialInput = serialInputs.find((el) => el.placeholder === '' || el.value !== '/Volumes/LaCie')
     expect(serialInput?.value ?? '').toBe('')
+  })
+
+  it('shows Network Volume in device type dropdown', () => {
+    renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
+    expect(screen.getByRole('option', { name: 'Network Volume' })).toBeInTheDocument()
+  })
+
+  it('scan result with is_network_mount true auto-selects network_volume type', async () => {
+    vi.mocked(detectVolumes).mockResolvedValue([
+      { path: '/Volumes/MyShare', label: 'MyShare', serial_number: null, is_network_mount: true },
+    ])
+    renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
+    await userEvent.click(screen.getByRole('button', { name: /scan volumes/i }))
+    await waitFor(() => expect(detectVolumes).toHaveBeenCalled())
+    await waitFor(() => {
+      // After scan, there may be two <select> elements (type + volumes). The device type
+      // dropdown is always first in the DOM.
+      const selects = screen.getAllByRole('combobox') as HTMLSelectElement[]
+      expect(selects[0].value).toBe('network_volume')
+    })
+  })
+
+  it('shows Scan volumes button for network_volume type', async () => {
+    renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'network_volume')
+    expect(screen.getByRole('button', { name: /scan volumes/i })).toBeInTheDocument()
   })
 })

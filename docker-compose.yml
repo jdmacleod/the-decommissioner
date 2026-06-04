@@ -7,6 +7,10 @@ services:
       - "8000:8000"
     volumes:
       - decommissioner_data:/data
+      # macOS: bind-mount the host's /Volumes so the Linux container can detect
+      # USB and external drives via GET /api/devices/detect-volumes.
+      # Remove this line when running on a Linux host (where /Volumes won't exist).
+      - /Volumes:/Volumes:ro
     environment:
       DATA_DIR: /data
       HOST: 0.0.0.0

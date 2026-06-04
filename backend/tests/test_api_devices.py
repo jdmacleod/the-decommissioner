@@ -558,6 +558,157 @@ def test_detect_volumes_serial_failure_returns_null(
     assert data[0]["serial_number"] is None
 
 
+def test_detect_volumes_is_network_mount_smbfs(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Volume whose fs_type is smbfs gets is_network_mount=True."""
+    import unittest.mock as mock
+
+    monkeypatch.setattr("app.api.devices.sys.platform", "darwin")
+
+    # Simulate `mount` output with smbfs entry
+    mount_output = "//user@host.local/share on /Volumes/MyShare (smbfs, nodev, nosuid)\n"
+
+    with (
+        mock.patch("app.api.devices.os.listdir", return_value=["MyShare"]),
+        mock.patch("app.api.devices.os.path.isdir", return_value=True),
+        mock.patch("app.api.devices.os.path.islink", return_value=False),
+        mock.patch(
+            "app.api.devices.subprocess.run",
+            side_effect=lambda cmd, **kw: mock.MagicMock(
+                returncode=0,
+                stdout=mount_output if cmd == ["mount"] else b"",
+            ),
+        ),
+    ):
+        r = client.get("/api/devices/detect-volumes")
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data) == 1
+    assert data[0]["is_network_mount"] is True
+
+
+def test_detect_volumes_is_network_mount_nfs(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Volume whose fs_type is nfs4 gets is_network_mount=True."""
+    import unittest.mock as mock
+
+    monkeypatch.setattr("app.api.devices.sys.platform", "linux")
+
+    mount_output = "nfs-server:/export on /mnt/nfs type nfs4 (rw,relatime)\n"
+
+    def fake_listdir(path: str) -> list[str]:
+        if path == "/mnt":
+            return ["nfs"]
+        return []
+
+    def fake_isdir(path: str) -> bool:
+        return path in ("/mnt", "/mnt/nfs", "/media")
+
+    with (
+        mock.patch("app.api.devices.os.listdir", side_effect=fake_listdir),
+        mock.patch("app.api.devices.os.path.isdir", side_effect=fake_isdir),
+        mock.patch("app.api.devices.os.path.islink", return_value=False),
+        mock.patch(
+            "app.api.devices.subprocess.run",
+            side_effect=lambda cmd, **kw: mock.MagicMock(
+                returncode=0,
+                stdout=mount_output if cmd == ["mount"] else "",
+                text=True,
+            ),
+        ),
+    ):
+        r = client.get("/api/devices/detect-volumes")
+    assert r.status_code == 200
+    data = r.json()
+    network_entries = [e for e in data if e["is_network_mount"]]
+    assert len(network_entries) >= 1
+
+
+def test_detect_volumes_local_not_network_mount(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Volume whose fs_type is hfs gets is_network_mount=False."""
+    import unittest.mock as mock
+
+    monkeypatch.setattr("app.api.devices.sys.platform", "darwin")
+
+    mount_output = "/dev/disk2s1 on /Volumes/USB Drive (hfs, local, nodev, nosuid)\n"
+
+    with (
+        mock.patch("app.api.devices.os.listdir", return_value=["USB Drive"]),
+        mock.patch("app.api.devices.os.path.isdir", return_value=True),
+        mock.patch("app.api.devices.os.path.islink", return_value=False),
+        mock.patch(
+            "app.api.devices.subprocess.run",
+            side_effect=lambda cmd, **kw: mock.MagicMock(
+                returncode=0,
+                stdout=mount_output if cmd == ["mount"] else b"",
+            ),
+        ),
+    ):
+        r = client.get("/api/devices/detect-volumes")
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data) == 1
+    assert data[0]["is_network_mount"] is False
+
+
+def test_get_mount_types_parses_macos_format() -> None:
+    """_get_mount_types() correctly parses macOS mount output."""
+    import unittest.mock as mock
+
+    from app.api.devices import _get_mount_types
+
+    mount_output = (
+        "/dev/disk1s1 on / (apfs, local, read-only, journaled)\n"
+        "//user@host.local/share on /Volumes/MyShare (smbfs, nodev, nosuid)\n"
+        "/dev/disk2s1 on /Volumes/USB Drive (hfs, local)\n"
+    )
+
+    with mock.patch("app.api.devices.subprocess.run") as mock_run:
+        mock_run.return_value = mock.MagicMock(returncode=0, stdout=mount_output)
+        result = _get_mount_types()
+
+    assert result["/"] == "apfs"
+    assert result["/Volumes/MyShare"] == "smbfs"
+    assert result["/Volumes/USB Drive"] == "hfs"
+
+
+def test_get_mount_types_parses_linux_format() -> None:
+    """_get_mount_types() correctly parses Linux mount output."""
+    import unittest.mock as mock
+
+    from app.api.devices import _get_mount_types
+
+    mount_output = (
+        "sysfs on /sys type sysfs (rw,nosuid,nodev,noexec)\n"
+        "//server/share on /mnt/smb type cifs (rw,relatime)\n"
+        "nfs-server:/export on /mnt/nfs type nfs4 (rw,relatime)\n"
+    )
+
+    with mock.patch("app.api.devices.subprocess.run") as mock_run:
+        mock_run.return_value = mock.MagicMock(returncode=0, stdout=mount_output)
+        result = _get_mount_types()
+
+    assert result["/sys"] == "sysfs"
+    assert result["/mnt/smb"] == "cifs"
+    assert result["/mnt/nfs"] == "nfs4"
+
+
+def test_get_mount_types_returns_empty_on_failure() -> None:
+    """_get_mount_types() returns {} when `mount` command fails."""
+    import unittest.mock as mock
+
+    from app.api.devices import _get_mount_types
+
+    with mock.patch("app.api.devices.subprocess.run", side_effect=Exception("not found")):
+        result = _get_mount_types()
+
+    assert result == {}
+
+
 # ── photo upload / serve / delete ────────────────────────────────────────────
 
 

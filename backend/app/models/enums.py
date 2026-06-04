@@ -8,6 +8,7 @@ class DeviceType(StrEnum):
     ipad = "ipad"
     usb_drive = "usb_drive"
     hard_drive = "hard_drive"
+    network_volume = "network_volume"
 
 
 class DeviceStage(StrEnum):

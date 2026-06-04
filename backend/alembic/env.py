@@ -1,17 +1,17 @@
 import sys
-from pathlib import Path
 from logging.config import fileConfig
+from pathlib import Path
 
-from alembic import context
 from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
+
+from alembic import context
 
 # Make sure the app package is importable
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Import all models so their metadata is registered
 import app.models  # noqa: F401
-
 from app.core.config import settings
 
 config = context.config

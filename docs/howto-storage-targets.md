@@ -6,7 +6,8 @@ A storage target is a restic repository where your device's files are backed up 
 
 ## Prerequisites
 
-- restic installed (`brew install restic` on macOS, `apt install restic` on Linux)
+- The app running natively — see [Quick start](../README.md#quick-start)
+- `restic` installed (`brew install restic` on macOS, `apt install restic` on Linux)
 - For SFTP: SSH key-based auth configured to the remote host
 - For S3: `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` set in your shell environment
 

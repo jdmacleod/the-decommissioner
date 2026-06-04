@@ -1,4 +1,4 @@
-export type DeviceType = 'mac' | 'linux' | 'iphone' | 'ipad' | 'usb_drive' | 'hard_drive'
+export type DeviceType = 'mac' | 'linux' | 'iphone' | 'ipad' | 'usb_drive' | 'hard_drive' | 'network_volume'
 
 export type DeviceStage =
   | 'registered' | 'cataloging' | 'cataloged'
@@ -133,6 +133,7 @@ export interface VolumeEntry {
   path: string
   label: string
   serial_number: string | null
+  is_network_mount: boolean
 }
 
 export interface ChecklistItem {

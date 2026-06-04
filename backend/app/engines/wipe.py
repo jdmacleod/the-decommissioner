@@ -9,7 +9,7 @@ from app.models.device import Device
 from app.models.enums import DeviceType, JobStatus
 from app.models.job import Job
 
-APPLE_DEVICE_TYPES = {DeviceType.mac, DeviceType.iphone, DeviceType.ipad}
+APPLE_DEVICE_TYPES = {DeviceType.mac, DeviceType.iphone, DeviceType.ipad, DeviceType.network_volume}
 
 APPLE_CHECKLIST: dict[DeviceType, list[str]] = {
     DeviceType.iphone: [
@@ -36,6 +36,11 @@ APPLE_CHECKLIST: dict[DeviceType, list[str]] = {
         "Unpair Bluetooth accessories",
         "Erase Mac: System Settings → General → Transfer or Reset → Erase All Content",
         "Device shows Setup Assistant screen (confirms erasure complete)",
+    ],
+    DeviceType.network_volume: [
+        "Backup complete and verified — all files accounted for in the restic snapshot",
+        "Confirm the share owner has been notified and access is no longer needed",
+        "Disconnect the share: Finder → right-click volume → Eject, or run `umount <path>`",
     ],
 }
 

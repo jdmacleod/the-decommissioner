@@ -231,3 +231,76 @@ def test_apple_device_types_contains_expected():
     assert DeviceType.iphone in APPLE_DEVICE_TYPES
     assert DeviceType.ipad in APPLE_DEVICE_TYPES
     assert DeviceType.hard_drive not in APPLE_DEVICE_TYPES
+    assert DeviceType.network_volume in APPLE_DEVICE_TYPES
+
+
+# ── network_volume wipe ───────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_network_volume_dispatches_to_checklist(session: Session):
+    device = make_device(
+        session, device_type="network_volume", stage="verified", source_path="/Volumes/MyShare"
+    )
+    job = make_job(session, device.id, job_type=JobType.wipe)
+
+    dispatched = []
+
+    async def fake_checklist(jid, dev, sess, runner):
+        dispatched.append("checklist")
+
+    async def fake_nwipe(jid, dev, sess, runner):
+        dispatched.append("nwipe")
+
+    with (
+        patch("app.engines.wipe._run_checklist_wipe", fake_checklist),
+        patch("app.engines.wipe._run_nwipe", fake_nwipe),
+    ):
+        await run_wipe(job.id, device, session, MagicMock())
+
+    assert dispatched == ["checklist"]
+
+
+@pytest.mark.asyncio
+async def test_network_volume_checklist_has_three_items(session: Session):
+    from app.engines.wipe import APPLE_CHECKLIST
+
+    device = make_device(
+        session, device_type="network_volume", stage="verified", source_path="/Volumes/MyShare"
+    )
+    job = make_job(session, device.id, job_type=JobType.wipe)
+
+    runner = MagicMock()
+    runner._set_status = AsyncMock()
+
+    await _run_checklist_wipe(job.id, device, session, runner)
+
+    session.refresh(job)
+    assert job.job_metadata is not None
+    meta = json.loads(job.job_metadata)
+    assert meta["method"] == "apple_checklist"
+    items = meta["checklist_items"]
+    assert len(items) == len(APPLE_CHECKLIST[DeviceType.network_volume])
+    assert all(not item["done"] for item in items)
+
+
+@pytest.mark.asyncio
+async def test_network_volume_checklist_content(session: Session):
+    device = make_device(
+        session, device_type="network_volume", stage="verified", source_path="/Volumes/MyShare"
+    )
+    job = make_job(session, device.id, job_type=JobType.wipe)
+
+    runner = MagicMock()
+    runner._set_status = AsyncMock()
+
+    await _run_checklist_wipe(job.id, device, session, runner)
+
+    session.refresh(job)
+    meta = json.loads(job.job_metadata)
+    labels = [item["label"] for item in meta["checklist_items"]]
+    assert any("backup" in label.lower() for label in labels)
+    assert any(
+        "disconnect" in label.lower() or "eject" in label.lower() or "umount" in label.lower()
+        for label in labels
+    )

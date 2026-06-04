@@ -12,10 +12,11 @@ const DEVICE_TYPES: { value: DeviceType; label: string }[] = [
   { value: 'ipad', label: 'iPad' },
   { value: 'usb_drive', label: 'USB Drive' },
   { value: 'hard_drive', label: 'Hard Drive' },
+  { value: 'network_volume', label: 'Network Volume' },
 ]
 
 const IOS_TYPES: DeviceType[] = ['iphone', 'ipad']
-const VOLUME_TYPES: DeviceType[] = ['hard_drive', 'usb_drive']
+const VOLUME_TYPES: DeviceType[] = ['hard_drive', 'usb_drive', 'network_volume']
 
 export function AddDevice() {
   const navigate = useNavigate()
@@ -66,6 +67,7 @@ export function AddDevice() {
       if (result.length > 0 && !sourcePath) {
         setSourcePath(result[0].path)
         if (result[0].serial_number) setSerialNumber(result[0].serial_number)
+        if (result[0].is_network_mount) setDeviceType('network_volume')
       }
     },
     onError: () => {
@@ -162,6 +164,7 @@ export function AddDevice() {
                   const selected = volumes.find((v) => v.path === e.target.value)
                   setSourcePath(e.target.value)
                   if (selected?.serial_number) setSerialNumber(selected.serial_number)
+                  if (selected?.is_network_mount) setDeviceType('network_volume')
                 }}
                 className="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono"
               >

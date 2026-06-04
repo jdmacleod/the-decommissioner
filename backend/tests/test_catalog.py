@@ -59,7 +59,13 @@ async def test_run_catalog_enumerates_all_files(
     assert len(entries) == 4  # unique, dup_a, dup_b, nested
 
 
-async def test_run_catalog_hashes_files(session: Session, source_dir: Path, runner: Any) -> None:
+async def test_run_catalog_hashes_files(
+    session: Session, source_dir: Path, runner: Any, monkeypatch: Any
+) -> None:
+    import shutil as shutil_mod
+
+    monkeypatch.setattr(shutil_mod, "which", lambda name: None)
+
     d = make_device(session, source_path=str(source_dir))
     j = make_job(session, d.id)
 
@@ -71,8 +77,12 @@ async def test_run_catalog_hashes_files(session: Session, source_dir: Path, runn
 
 
 async def test_run_catalog_detects_duplicates(
-    session: Session, source_dir: Path, runner: Any
+    session: Session, source_dir: Path, runner: Any, monkeypatch: Any
 ) -> None:
+    import shutil as shutil_mod
+
+    monkeypatch.setattr(shutil_mod, "which", lambda name: None)
+
     d = make_device(session, source_path=str(source_dir))
     j = make_job(session, d.id)
 
@@ -84,9 +94,13 @@ async def test_run_catalog_detects_duplicates(
 
 
 async def test_run_catalog_job_status_completed(
-    session: Session, source_dir: Path, runner: Any
+    session: Session, source_dir: Path, runner: Any, monkeypatch: Any
 ) -> None:
+    import shutil as shutil_mod
+
     from app.models.enums import JobStatus
+
+    monkeypatch.setattr(shutil_mod, "which", lambda name: None)
 
     d = make_device(session, source_path=str(source_dir))
     j = make_job(session, d.id)

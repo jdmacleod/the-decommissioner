@@ -36,38 +36,48 @@ async def run_catalog(
         await _fail_job(session, job_id, "Device has no source_path or staging_path")
         return
 
+    if not os.path.isdir(source_path):
+        await _fail_job(session, job_id, f"Source path is not accessible: {source_path}")
+        return
+
     log_path = runner.log_path_for(job_id)
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Pass 1 — enumerate all files via os.walk and bulk-insert FileEntry rows
     entries = []
-    with open(log_path, "a", buffering=1) as log_file:
-        log_file.write(f"[{datetime.utcnow().isoformat()}] START: catalog {source_path}\n")
-        log_file.write(f"[{datetime.utcnow().isoformat()}] PASS 1: enumerating files\n")
+    try:
+        with open(log_path, "a", buffering=1) as log_file:
+            log_file.write(f"[{datetime.utcnow().isoformat()}] START: catalog {source_path}\n")
+            log_file.write(f"[{datetime.utcnow().isoformat()}] PASS 1: enumerating files\n")
 
-        for dirpath, _dirnames, filenames in os.walk(source_path):
-            for fname in filenames:
-                full_path = os.path.join(dirpath, fname)
-                try:
-                    stat = os.stat(full_path)
-                except OSError:
-                    continue
-                entries.append(
-                    {
-                        "device_id": device.id,
-                        "path": full_path,
-                        "relative_path": os.path.relpath(full_path, source_path),
-                        "size_bytes": stat.st_size,
-                        "sha256": "",
-                        "mime_type": None,
-                        "mtime": datetime.fromtimestamp(stat.st_mtime),
-                        "status": FileStatus.pending,
-                        "duplicate_group_id": None,
-                        "restic_snapshot_id": None,
-                    }
-                )
+            for dirpath, _dirnames, filenames in os.walk(source_path):
+                for fname in filenames:
+                    full_path = os.path.join(dirpath, fname)
+                    try:
+                        stat = os.stat(full_path)
+                    except OSError:
+                        continue
+                    entries.append(
+                        {
+                            "device_id": device.id,
+                            "path": full_path,
+                            "relative_path": os.path.relpath(full_path, source_path),
+                            "size_bytes": stat.st_size,
+                            "sha256": "",
+                            "mime_type": None,
+                            "mtime": datetime.fromtimestamp(stat.st_mtime),
+                            "status": FileStatus.pending,
+                            "duplicate_group_id": None,
+                            "restic_snapshot_id": None,
+                        }
+                    )
 
-        log_file.write(f"[{datetime.utcnow().isoformat()}] PASS 1: found {len(entries)} files\n")
+            log_file.write(
+                f"[{datetime.utcnow().isoformat()}] PASS 1: found {len(entries)} files\n"
+            )
+    except OSError as e:
+        await _fail_job(session, job_id, f"Source path became inaccessible during catalog: {e}")
+        return
 
     # Delete old entries for re-catalog, then bulk insert
     session.execute(sa_delete(FileEntry).where(FileEntry.device_id == device.id))

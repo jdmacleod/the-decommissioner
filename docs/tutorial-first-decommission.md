@@ -8,11 +8,11 @@ This takes 15-30 minutes of active time (plus however long your catalog and back
 
 ## What you'll need
 
-- The app running locally — see [Quick start](../README.md#quick-start)
+- The app running locally (native install) — see [Quick start](../README.md#quick-start)
 - An external drive mounted on your machine
-- restic installed (`brew install restic` on macOS)
+- `restic` installed (`brew install restic` on macOS, `apt install restic` on Linux)
 - A destination for the backup: a local external drive, SFTP host, or S3 bucket
-- Your restic repository password exported: `export RESTIC_PASSWORD=your-passphrase`
+- Your restic repository password in your environment: `export RESTIC_PASSWORD=your-passphrase`
 
 ---
 
@@ -108,7 +108,7 @@ When verify completes, the panel confirms the count matches.
 
 > **Only do this after verifying.** The wipe step is irreversible.
 
-For HDD/Linux devices, click **Start Wipe**. This runs `nwipe` on the block device. You need to be on Linux and have `nwipe` installed.
+For HDD/Linux devices, click **Start Wipe**. This runs `nwipe` on the block device. You must be on a Linux host with `nwipe` installed (`apt install nwipe`). If you're on macOS and want to wipe an external drive, use Disk Utility's "Erase" with the security options appropriate for your drive type, then mark the device as wiped manually.
 
 For Mac/iPhone/iPad, the app shows Apple's recommended erase checklist. Each step (Sign out of iCloud, Erase All Content and Settings, etc.) has a checkbox. Check each as you complete it in the device's Settings. When all items are checked, click **Mark as Wiped**.
 
