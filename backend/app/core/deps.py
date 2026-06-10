@@ -17,7 +17,8 @@ _WIPE_DEP = (
     {
         "name": "diskutil",
         "required_for": [JobType.wipe],
-        "version_cmd": ["diskutil", "version"],
+        "version_cmd": ["sw_vers", "-productVersion"],
+        "version_prefix": "macOS ",
         "install_hint": "Built-in on macOS — no installation needed",
     }
     if sys.platform == "darwin"
@@ -75,7 +76,8 @@ def check_dependencies(session: Session) -> list[Dependency]:
                     text=True,
                     timeout=5,
                 )
-                version = (out.stdout or out.stderr).strip().split("\n")[0]
+                raw = (out.stdout or out.stderr).strip().split("\n")[0]
+                version = str(dep.get("version_prefix", "")) + raw
                 status = DependencyStatus.found
             except Exception:
                 status = DependencyStatus.found
