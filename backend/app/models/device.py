@@ -27,9 +27,9 @@ class Device(DeviceBase, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
-    jobs: list["Job"] = Relationship(back_populates="device")
-    file_entries: list["FileEntry"] = Relationship(back_populates="device")
-    snapshots: list["Snapshot"] = Relationship(back_populates="device")
+    jobs: list["Job"] = Relationship(back_populates="device", cascade_delete=True)
+    file_entries: list["FileEntry"] = Relationship(back_populates="device", cascade_delete=True)
+    snapshots: list["Snapshot"] = Relationship(back_populates="device", cascade_delete=True)
 
 
 class DeviceCreate(DeviceBase):

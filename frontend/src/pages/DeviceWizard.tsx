@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getDevice, getDupStats, getDevicePhotoUrl, uploadDevicePhoto, deleteDevicePhoto } from '../lib/api'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { getDevice, getDupStats, getDevicePhotoUrl, uploadDevicePhoto, deleteDevicePhoto, deleteDevice } from '../lib/api'
 import { StageProgress } from '../components/StageProgress'
 import { PhotoUpload } from '../components/PhotoUpload'
 import { CatalogStage } from '../stages/CatalogStage'
@@ -34,9 +34,19 @@ export function DeviceWizard() {
   const { id } = useParams<{ id: string }>()
   const deviceId = Number(id)
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const [editingPhoto, setEditingPhoto] = useState(false)
   const [pendingPhoto, setPendingPhoto] = useState<File | null>(null)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
   const uploadingRef = useRef(false)
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteDevice(deviceId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devices'] })
+      navigate('/')
+    },
+  })
 
   const { data: device, isLoading } = useQuery({
     queryKey: ['device', deviceId],
@@ -146,6 +156,44 @@ export function DeviceWizard() {
               <span className="font-mono ml-2 text-gray-400">{device.source_path}</span>
             )}
           </div>
+
+          {!confirmingDelete ? (
+            <button
+              type="button"
+              onClick={() => setConfirmingDelete(true)}
+              className="mt-3 text-xs text-red-500 hover:text-red-700"
+            >
+              Delete device
+            </button>
+          ) : (
+            <div className="mt-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-600">Delete forever?</span>
+                <button
+                  type="button"
+                  onClick={() => deleteMutation.mutate()}
+                  disabled={deleteMutation.isPending}
+                  className="text-xs text-white bg-red-600 hover:bg-red-700 px-2 py-0.5 rounded disabled:opacity-50"
+                >
+                  {deleteMutation.isPending ? 'Deleting…' : 'Yes, delete'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setConfirmingDelete(false); deleteMutation.reset() }}
+                  className="text-xs text-gray-500 hover:text-gray-700"
+                >
+                  Cancel
+                </button>
+              </div>
+              {deleteMutation.isError && (
+                <div className="mt-1 text-xs text-red-600">
+                  {String(deleteMutation.error).includes('409')
+                    ? 'Cannot delete: a job is currently running.'
+                    : 'Delete failed. Please try again.'}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

@@ -105,6 +105,69 @@ def test_delete_device_not_found(client: TestClient) -> None:
     assert client.delete("/api/devices/99").status_code == 404
 
 
+def test_delete_device_cascades_jobs(client: TestClient, session: Session) -> None:
+    from sqlmodel import select
+
+    from app.models.enums import JobStatus
+    from app.models.job import Job
+    from tests.conftest import make_job
+
+    d = make_device(session)
+    device_id = d.id
+    make_job(session, device_id, status=JobStatus.completed)
+    assert client.delete(f"/api/devices/{device_id}").status_code == 204
+    session.expire_all()
+    assert session.exec(select(Job).where(Job.device_id == device_id)).all() == []
+
+
+def test_delete_device_blocks_active_job(client: TestClient, session: Session) -> None:
+    from app.models.enums import JobStatus
+    from tests.conftest import make_job
+
+    d = make_device(session)
+    make_job(session, d.id, status=JobStatus.in_progress)
+    assert client.delete(f"/api/devices/{d.id}").status_code == 409
+
+
+def test_delete_device_cleans_up_duplicate_groups(client: TestClient, session: Session) -> None:
+    from datetime import datetime
+
+    from sqlmodel import select
+
+    from app.models.duplicate_group import DuplicateGroup
+    from app.models.file_entry import FileEntry
+
+    d = make_device(session)
+
+    dg = DuplicateGroup(content_hash="abc" * 21, total_size_bytes=1024)
+    session.add(dg)
+    session.commit()
+    session.refresh(dg)
+
+    fe = FileEntry(
+        device_id=d.id,
+        path="/tmp/file.txt",
+        relative_path="file.txt",
+        size_bytes=512,
+        sha256="a" * 64,
+        mtime=datetime.utcnow(),
+        status="pending",
+        duplicate_group_id=dg.id,
+    )
+    session.add(fe)
+    session.commit()
+    session.refresh(dg)
+    dg.canonical_entry_id = fe.id
+    session.add(dg)
+    session.commit()
+
+    device_id = d.id
+    dg_id = dg.id
+    assert client.delete(f"/api/devices/{device_id}").status_code == 204
+    session.expire_all()
+    assert session.exec(select(DuplicateGroup).where(DuplicateGroup.id == dg_id)).first() is None
+
+
 def test_trigger_migrate_wrong_stage(client: TestClient, session: Session) -> None:
     """Non-catalog job type uses the elif FSM path."""
     make_device(session, stage="registered")

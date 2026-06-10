@@ -1,6 +1,7 @@
 import asyncio
 import contextlib
 import os
+import shutil
 import subprocess
 import sys
 from datetime import datetime
@@ -15,7 +16,9 @@ from app.core.config import settings
 from app.core.deps import SessionDep, get_runner
 from app.core.job_factory import create_job
 from app.models.device import Device, DeviceCreate, DeviceRead, DeviceUpdate
-from app.models.enums import DeviceStage, JobType
+from app.models.duplicate_group import DuplicateGroup
+from app.models.enums import DeviceStage, JobStatus, JobType
+from app.models.job import Job
 
 PHOTO_MAX_BYTES = 5 * 1024 * 1024  # 5 MB
 PHOTO_ALLOWED_TYPES = {
@@ -315,6 +318,37 @@ def delete_device(device_id: int, session: SessionDep):
     device = session.get(Device, device_id)
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
+
+    active_job = session.exec(
+        select(Job).where(
+            Job.device_id == device_id,
+            Job.status.in_([JobStatus.pending, JobStatus.in_progress]),
+        )
+    ).first()
+    if active_job:
+        raise HTTPException(status_code=409, detail="Cannot delete device with an active job")
+
+    # DuplicateGroups have no direct FK to Device — clean them up before cascade.
+    file_entry_ids = {fe.id for fe in device.file_entries}
+    dup_group_ids = {fe.duplicate_group_id for fe in device.file_entries if fe.duplicate_group_id is not None}
+    for dg_id in dup_group_ids:
+        dg = session.get(DuplicateGroup, dg_id)
+        if dg is None:
+            continue
+        if {e.id for e in dg.entries}.issubset(file_entry_ids):
+            session.delete(dg)
+        elif dg.canonical_entry_id in file_entry_ids:
+            dg.canonical_entry_id = None
+            session.add(dg)
+    session.flush()
+
+    if device.photo_path:
+        with contextlib.suppress(OSError):
+            os.remove(device.photo_path)
+
+    if device.staging_path:
+        shutil.rmtree(device.staging_path, ignore_errors=True)
+
     session.delete(device)
     session.commit()
 

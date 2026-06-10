@@ -27,8 +27,13 @@ export const createDevice = (body: DeviceCreate) =>
   request<Device>('/devices', { method: 'POST', body: JSON.stringify(body) })
 export const updateDevice = (id: number, body: Partial<Device>) =>
   request<Device>(`/devices/${id}`, { method: 'PATCH', body: JSON.stringify(body) })
-export const deleteDevice = (id: number) =>
-  fetch(`${BASE}/devices/${id}`, { method: 'DELETE' })
+export const deleteDevice = async (id: number): Promise<void> => {
+  const res = await fetch(`${BASE}/devices/${id}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`${res.status}: ${text}`)
+  }
+}
 
 // Jobs
 export const getJob = (id: number) => request<Job>(`/jobs/${id}`)
