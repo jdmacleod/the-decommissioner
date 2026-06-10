@@ -4,6 +4,11 @@ BACKEND_DIR = backend
 FRONTEND_DIR = frontend
 PYTHON = $(BACKEND_DIR)/.venv/bin/python
 
+# Load .env from project root if present and export all vars to subprocesses.
+# This ensures RESTIC_PASSWORD and other env vars reach uvicorn and restic.
+-include .env
+export
+
 dev-backend:
 	cd $(BACKEND_DIR) && .venv/bin/uvicorn app.main:app --reload --port 8000
 
