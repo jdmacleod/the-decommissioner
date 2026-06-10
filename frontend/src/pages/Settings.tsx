@@ -48,6 +48,8 @@ export function Settings() {
   const testTarget = useMutation({
     mutationFn: (id: number) => testStorageTarget(id),
     onSuccess: (data, id) => setTestResults((prev) => ({ ...prev, [id]: data })),
+    onError: (err, id) =>
+      setTestResults((prev) => ({ ...prev, [id]: { ok: false, output: String(err) } })),
   })
 
   const initTarget = useMutation({
@@ -56,6 +58,8 @@ export function Settings() {
       setInitResults((prev) => ({ ...prev, [id]: data }))
       if (data.ok) queryClient.invalidateQueries({ queryKey: ['storage-targets'] })
     },
+    onError: (err, id) =>
+      setInitResults((prev) => ({ ...prev, [id]: { ok: false, output: String(err) } })),
   })
 
   const saveEdit = useMutation({

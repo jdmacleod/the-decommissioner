@@ -194,4 +194,31 @@ describe('Settings page', () => {
     await userEvent.click(screen.getByRole('button', { name: /test/i }))
     await waitFor(() => screen.getByText(/✗ Failed/))
   })
+
+  it('shows test error when testStorageTarget rejects', async () => {
+    vi.mocked(getStorageTargets).mockResolvedValue([makeTarget()])
+    vi.mocked(testStorageTarget).mockRejectedValue(new Error('500 timeout'))
+    renderWithProviders(<Settings />)
+    await waitFor(() => screen.getByRole('button', { name: /test/i }))
+    await userEvent.click(screen.getByRole('button', { name: /test/i }))
+    await waitFor(() => screen.getByText(/✗ Failed/))
+  })
+
+  it('shows init success result after Init click', async () => {
+    vi.mocked(getStorageTargets).mockResolvedValue([makeTarget({ initialized: false })])
+    vi.mocked(initStorageTarget).mockResolvedValue({ ok: true, output: 'created restic repository' })
+    renderWithProviders(<Settings />)
+    await waitFor(() => screen.getByRole('button', { name: /init/i }))
+    await userEvent.click(screen.getByRole('button', { name: /init/i }))
+    await waitFor(() => screen.getByText(/Repository initialized/))
+  })
+
+  it('shows init error when initStorageTarget rejects', async () => {
+    vi.mocked(getStorageTargets).mockResolvedValue([makeTarget({ initialized: false })])
+    vi.mocked(initStorageTarget).mockRejectedValue(new Error('500 timed out'))
+    renderWithProviders(<Settings />)
+    await waitFor(() => screen.getByRole('button', { name: /init/i }))
+    await userEvent.click(screen.getByRole('button', { name: /init/i }))
+    await waitFor(() => screen.getByText(/Init failed/))
+  })
 })

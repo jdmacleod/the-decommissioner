@@ -56,6 +56,32 @@ def delete_target(target_id: int, session: SessionDep) -> None:
     session.commit()
 
 
+def _run_restic(cmd: list[str], env: dict[str, str], timeout: int) -> dict[str, object]:
+    """Run a restic command and return {ok, output}. Never raises."""
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            stdin=subprocess.DEVNULL,
+            text=True,
+            env=env,
+            timeout=timeout,
+        )
+        parts = [result.stdout.strip(), result.stderr.strip()]
+        output = "\n".join(p for p in parts if p)
+        return {"ok": result.returncode == 0, "output": output}
+    except subprocess.TimeoutExpired:
+        hint = (
+            f"restic timed out after {timeout}s. "
+            "Check that the password env var is set and the path is reachable. "
+            "On macOS, verify Terminal (or the app launching this service) has "
+            "Full Disk Access in System Settings → Privacy & Security."
+        )
+        return {"ok": False, "output": hint}
+    except FileNotFoundError:
+        return {"ok": False, "output": "restic not found. Install it and ensure it is on PATH."}
+
+
 @router.post("/{target_id}/test")
 def test_target(target_id: int, session: SessionDep) -> dict[str, object]:
     target = session.get(StorageTarget, target_id)
@@ -65,17 +91,9 @@ def test_target(target_id: int, session: SessionDep) -> dict[str, object]:
         **os.environ,
         target.restic_password_env: os.environ.get(target.restic_password_env, ""),
     }
-    result = subprocess.run(
-        ["restic", "snapshots", "--repo", target.path, "--json"],
-        capture_output=True,
-        text=True,
-        env=merged_env,
-        timeout=30,
+    return _run_restic(
+        ["restic", "snapshots", "--repo", target.path, "--json"], merged_env, timeout=30
     )
-    return {
-        "ok": result.returncode == 0,
-        "output": (result.stdout or result.stderr).strip(),
-    }
 
 
 @router.post("/{target_id}/init")
@@ -87,21 +105,12 @@ def init_target(target_id: int, session: SessionDep) -> dict[str, object]:
         **os.environ,
         target.restic_password_env: os.environ.get(target.restic_password_env, ""),
     }
-    result = subprocess.run(
-        ["restic", "init", "--repo", target.path],
-        capture_output=True,
-        text=True,
-        env=merged_env,
-        timeout=60,
-    )
-    if result.returncode == 0:
+    result = _run_restic(["restic", "init", "--repo", target.path], merged_env, timeout=60)
+    if result["ok"]:
         target.initialized = True
         session.add(target)
         session.commit()
-    return {
-        "ok": result.returncode == 0,
-        "output": (result.stdout or result.stderr).strip(),
-    }
+    return result
 
 
 @router.get("/list-dirs")
@@ -112,11 +121,15 @@ def list_dirs(path: str = Query(default="/")) -> dict[str, object]:
         raise HTTPException(status_code=404, detail=f"Path not found: {path}")
     try:
         entries = sorted(
-            ({"name": d.name, "path": str(d)} for d in base.iterdir() if d.is_dir() and not d.name.startswith(".")),
+            (
+                {"name": d.name, "path": str(d)}
+                for d in base.iterdir()
+                if d.is_dir() and not d.name.startswith(".")
+            ),
             key=lambda e: e["name"].lower(),
         )
-    except PermissionError:
-        raise HTTPException(status_code=403, detail="Permission denied")
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail="Permission denied") from e
     parent = str(base.parent) if base.parent != base else None
     return {"path": str(base), "parent": parent, "entries": entries}
 

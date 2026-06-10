@@ -150,3 +150,61 @@ def test_list_targets_multiple(client: TestClient, session: Session) -> None:
     make_storage_target(session, name="B")
     r = client.get("/api/storage-targets")
     assert len(r.json()) == 2
+
+
+def test_init_target_timeout(client: TestClient, session: Session) -> None:
+    make_storage_target(session)
+    with patch("app.api.storage_targets.subprocess.run", side_effect=subprocess.TimeoutExpired(cmd="restic", timeout=60)):
+        r = client.post("/api/storage-targets/1/init")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["ok"] is False
+    assert "timed out" in data["output"].lower()
+    # initialized flag must not be set on timeout
+    target = client.get("/api/storage-targets").json()[0]
+    assert target["initialized"] is False
+
+
+def test_test_target_timeout(client: TestClient, session: Session) -> None:
+    make_storage_target(session)
+    with patch("app.api.storage_targets.subprocess.run", side_effect=subprocess.TimeoutExpired(cmd="restic", timeout=30)):
+        r = client.post("/api/storage-targets/1/test")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["ok"] is False
+    assert "timed out" in data["output"].lower()
+
+
+def test_init_target_restic_not_found(client: TestClient, session: Session) -> None:
+    make_storage_target(session)
+    with patch("app.api.storage_targets.subprocess.run", side_effect=FileNotFoundError):
+        r = client.post("/api/storage-targets/1/init")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["ok"] is False
+    assert "not found" in data["output"].lower()
+
+
+def test_run_restic_uses_devnull_stdin(client: TestClient, session: Session) -> None:
+    make_storage_target(session)
+    ok_result = MagicMock(spec=subprocess.CompletedProcess)
+    ok_result.returncode = 0
+    ok_result.stdout = "created"
+    ok_result.stderr = ""
+    with patch("app.api.storage_targets.subprocess.run", return_value=ok_result) as mock_run:
+        client.post("/api/storage-targets/1/init")
+    call_kwargs = mock_run.call_args.kwargs
+    assert call_kwargs.get("stdin") == subprocess.DEVNULL
+
+
+def test_run_restic_combines_stdout_and_stderr(client: TestClient, session: Session) -> None:
+    make_storage_target(session)
+    result = MagicMock(spec=subprocess.CompletedProcess)
+    result.returncode = 1
+    result.stdout = "some stdout"
+    result.stderr = "some stderr"
+    with patch("app.api.storage_targets.subprocess.run", return_value=result):
+        r = client.post("/api/storage-targets/1/init")
+    output = r.json()["output"]
+    assert "some stdout" in output
+    assert "some stderr" in output
