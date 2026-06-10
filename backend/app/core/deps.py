@@ -6,7 +6,7 @@ from typing import Annotated
 
 from fastapi import Depends
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.core.database import get_session
 from app.models.dependency import Dependency
@@ -109,6 +109,12 @@ def check_dependencies(session: Session) -> list[Dependency]:
                 install_hint=dep["install_hint"],
             )
         )
+
+    # Remove rows for tools no longer in REQUIRED on this platform (e.g. nwipe on macOS)
+    required_names = {str(dep["name"]) for dep in REQUIRED}
+    stale = session.exec(select(Dependency).where(Dependency.name.not_in(required_names))).all()
+    for row in stale:
+        session.delete(row)
 
     session.commit()
     return results
