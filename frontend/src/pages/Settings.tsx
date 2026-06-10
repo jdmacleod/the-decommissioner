@@ -8,6 +8,7 @@ import {
 import { StorageTargetCard } from '../components/StorageTargetCard'
 import { StorageTargetForm } from '../components/StorageTargetForm'
 import type { StorageTargetFormValues } from '../components/StorageTargetForm'
+import { DependencyBadge } from '../components/DependencyBadge'
 
 export function Settings() {
   const queryClient = useQueryClient()
@@ -142,13 +143,7 @@ export function Settings() {
               <tr key={dep.name}>
                 <td className="py-2 pr-4 font-mono text-xs">{dep.name}</td>
                 <td className="py-2 pr-4">
-                  <span
-                    className={`inline-flex items-center gap-1 text-xs font-medium ${
-                      dep.status === 'found' ? 'text-green-700' : 'text-red-600'
-                    }`}
-                  >
-                    {dep.status === 'found' ? '✓' : '✗'} {dep.status}
-                  </span>
+                  <DependencyBadge dependency={dep} />
                 </td>
                 <td className="py-2 pr-4 text-xs text-gray-500 font-mono truncate max-w-[180px]">
                   {dep.version ?? '—'}

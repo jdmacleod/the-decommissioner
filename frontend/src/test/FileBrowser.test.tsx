@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { FileBrowser } from '../pages/FileBrowser'
+import { FileBrowser } from '../stages/FileBrowser'
 import { renderWithProviders } from './helpers'
 
 // TanStack Virtual needs ResizeObserver in jsdom

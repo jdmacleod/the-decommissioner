@@ -6,9 +6,9 @@ import { StageProgress } from '../components/StageProgress'
 import { PhotoUpload } from '../components/PhotoUpload'
 import { CatalogStage } from '../stages/CatalogStage'
 import { VerifyStage } from '../stages/VerifyStage'
-import { MigrateStage } from './MigrateStage'
-import { WipeStage } from './WipeStage'
-import { RecycleStage } from './RecycleStage'
+import { MigrateStage } from '../stages/MigrateStage'
+import { WipeStage } from '../stages/WipeStage'
+import { RecycleStage } from '../stages/RecycleStage'
 import type { DeviceStage } from '../types/api'
 
 const ANALYZE_ACTIVE: DeviceStage[] = [

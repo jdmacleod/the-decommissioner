@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { RecycleStage } from '../pages/RecycleStage'
+import { RecycleStage } from '../stages/RecycleStage'
 import { renderWithProviders } from './helpers'
 import type { Device } from '../types/api'
 

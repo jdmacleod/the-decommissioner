@@ -4,8 +4,8 @@ import { DeviceSidebar } from './components/DeviceSidebar'
 import { Dashboard } from './pages/Dashboard'
 import { AddDevice } from './pages/AddDevice'
 import { DeviceWizard } from './pages/DeviceWizard'
-import { FileBrowser } from './pages/FileBrowser'
-import { DuplicateResolver } from './pages/DuplicateResolver'
+import { FileBrowser } from './stages/FileBrowser'
+import { DuplicateResolver } from './stages/DuplicateResolver'
 import { Settings } from './pages/Settings'
 
 const queryClient = new QueryClient({

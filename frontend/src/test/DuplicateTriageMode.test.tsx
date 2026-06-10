@@ -1,7 +1,7 @@
 import { screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { DuplicateTriageMode } from '../pages/DuplicateTriageMode'
+import { DuplicateTriageMode } from '../stages/DuplicateTriageMode'
 import { renderWithProviders } from './helpers'
 
 vi.mock('../lib/api', () => ({

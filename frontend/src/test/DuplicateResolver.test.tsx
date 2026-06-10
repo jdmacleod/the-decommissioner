@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { DuplicateResolver } from '../pages/DuplicateResolver'
+import { DuplicateResolver } from '../stages/DuplicateResolver'
 import { renderWithProviders } from './helpers'
 
 vi.mock('../lib/api', () => ({
@@ -12,7 +12,7 @@ vi.mock('../lib/api', () => ({
   autoResolveGroups: vi.fn(),
 }))
 
-vi.mock('../pages/DuplicateTriageMode', () => ({
+vi.mock('../stages/DuplicateTriageMode', () => ({
   DuplicateTriageMode: ({ onClose }: { onClose: () => void }) => (
     <div data-testid="triage-overlay">
       <button onClick={onClose}>Exit triage</button>

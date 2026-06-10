@@ -57,7 +57,8 @@ the-decommissioner/
 │   │   ├── main.py                  # FastAPI app init, lifespan, static files, CORS
 │   │   ├── api/
 │   │   │   ├── __init__.py
-│   │   │   ├── devices.py           # CRUD + /detect-ios + /jobs trigger
+│   │   │   ├── _job_runners.py      # background task handlers (catalog, wipe, migrate, ios)
+│   │   │   ├── devices.py           # CRUD + /detect-ios + /detect-volumes + /jobs trigger
 │   │   │   ├── file_entries.py      # GET (paginated/filtered) + PATCH bulk
 │   │   │   ├── duplicate_groups.py  # GET + PATCH + auto-resolve
 │   │   │   ├── jobs.py              # GET + SSE stream + cancel
@@ -105,20 +106,26 @@ the-decommissioner/
 │   │   │   ├── CatalogStage.tsx
 │   │   │   ├── FileBrowser.tsx      # virtualized TanStack Table
 │   │   │   ├── DuplicateResolver.tsx
+│   │   │   ├── DuplicateTriageMode.tsx  # keyboard triage overlay
 │   │   │   ├── MigrateStage.tsx
 │   │   │   ├── VerifyStage.tsx
-│   │   │   ├── WipeStage.tsx        # renders HDD or Apple checklist variant
+│   │   │   ├── WipeStage.tsx        # renders HDD, Apple checklist, or network disconnect variant
 │   │   │   └── RecycleStage.tsx
 │   │   ├── components/
-│   │   │   ├── JobLog.tsx           # SSE log stream viewer
+│   │   │   ├── JobLog.tsx           # SSE log stream viewer (uses useJobStream)
 │   │   │   ├── StageProgress.tsx    # stage indicator bar
 │   │   │   ├── DeviceCard.tsx       # dashboard kanban card
 │   │   │   ├── DeviceSidebar.tsx
-│   │   │   └── DependencyBadge.tsx
+│   │   │   ├── DependencyBadge.tsx  # found/missing status pill
+│   │   │   ├── PhotoUpload.tsx      # drag-and-drop photo input
+│   │   │   ├── StorageTargetCard.tsx
+│   │   │   └── StorageTargetForm.tsx
 │   │   ├── lib/
 │   │   │   ├── api.ts               # typed fetch wrappers for all endpoints
 │   │   │   ├── stream.ts            # EventSource wrapper hook (useJobStream)
-│   │   │   └── store.ts             # Zustand store
+│   │   │   ├── store.ts             # Zustand store (selectedDeviceId, wizardStep)
+│   │   │   ├── dupHeuristic.ts      # duplicate keeper heuristic
+│   │   │   └── utils.ts             # formatBytes, etc.
 │   │   └── types/
 │   │       └── api.ts               # TypeScript types matching backend schemas
 │   ├── index.html

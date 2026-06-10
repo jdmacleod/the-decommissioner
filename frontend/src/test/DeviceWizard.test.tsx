@@ -35,7 +35,7 @@ vi.mock('../stages/VerifyStage', () => ({
   ),
 }))
 
-vi.mock('../pages/MigrateStage', () => ({
+vi.mock('../stages/MigrateStage', () => ({
   MigrateStage: ({ device }: { device: { stage: string } }) => (
     <div data-testid="migrate-stage" data-stage={device.stage}>
       MigrateStage
@@ -43,7 +43,7 @@ vi.mock('../pages/MigrateStage', () => ({
   ),
 }))
 
-vi.mock('../pages/WipeStage', () => ({
+vi.mock('../stages/WipeStage', () => ({
   WipeStage: ({ device }: { device: { stage: string } }) => (
     <div data-testid="wipe-stage" data-stage={device.stage}>
       WipeStage
@@ -51,7 +51,7 @@ vi.mock('../pages/WipeStage', () => ({
   ),
 }))
 
-vi.mock('../pages/RecycleStage', () => ({
+vi.mock('../stages/RecycleStage', () => ({
   RecycleStage: ({ device }: { device: { stage: string } }) => (
     <div data-testid="recycle-stage" data-stage={device.stage}>
       RecycleStage

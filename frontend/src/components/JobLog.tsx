@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useJobStream } from '../lib/stream'
 
 interface JobLogProps {
   jobId: number
@@ -7,36 +8,17 @@ interface JobLogProps {
 }
 
 export function JobLog({ jobId, className = '', height = '300px' }: JobLogProps) {
-  const [lines, setLines] = useState<string[]>([])
-  const [done, setDone] = useState(false)
+  const { lines, done } = useJobStream(jobId)
   const [showScrollBtn, setShowScrollBtn] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const autoScrollRef = useRef(true)
 
+  // Reset auto-scroll when jobId changes
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLines([])        // Reset state when jobId changes — intentional
-    setDone(false)
-    setShowScrollBtn(false)
     autoScrollRef.current = true
-
-    const es = new EventSource(`/api/jobs/${jobId}/stream`)
-
-    es.onmessage = (e) => {
-      setLines((prev) => [...prev, e.data])
-    }
-
-    es.addEventListener('done', () => {
-      setDone(true)
-      es.close()
-    })
-
-    es.onerror = () => {
-      es.close()
-    }
-
-    return () => es.close()
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setShowScrollBtn(false)  // Intentional reset on jobId change
   }, [jobId])
 
   // Auto-scroll unless user has scrolled up

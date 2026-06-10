@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { MigrateStage } from '../pages/MigrateStage'
+import { MigrateStage } from '../stages/MigrateStage'
 import { renderWithProviders } from './helpers'
 import type { Device, StorageTarget } from '../types/api'
 
