@@ -36,7 +36,7 @@ workflows — each step is a full page to give users room to think.
 │  Health      │                                              │
 │  ✓ restic    │                                              │
 │  ✓ czkawka   │                                              │
-│  ✗ nwipe     │                                              │
+│  ✗ nwipe     │  ← Linux only; on macOS shows "diskutil" (always found)
 └──────────────┴──────────────────────────────────────────────┘
 ```
 
@@ -346,13 +346,19 @@ migration manually if needed before proceeding to wipe.
 
 Rendered differently based on `device.device_type`.
 
-**For HDD/Linux (automated):**
+**For HDD/USB drives (automated):**
+
+macOS uses `diskutil secureErase` (built-in); Linux uses `nwipe`. The wipe engine
+writes the actual tool name and method to `job_metadata.method` so the UI always
+displays the correct tool for the current platform.
+
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │  Step 5: Wipe Drive                                          │
 │                                                              │
 │  Device: /dev/sdb  (WD 2TB)                                  │
-│  Method: nwipe — DoD 5220.22-M (3-pass)                     │
+│  Method: nwipe — DoD 5220.22-M (3-pass)          ← Linux    │
+│        OR diskutil secureErase (3 passes)         ← macOS   │
 │                                                              │
 │  ⚠ This is irreversible. The drive will be overwritten.      │
 │     Verify your migration is complete before proceeding.     │

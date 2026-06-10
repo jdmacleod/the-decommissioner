@@ -54,7 +54,7 @@ async def run_wipe(
     if device.device_type in APPLE_DEVICE_TYPES:
         await _run_checklist_wipe(job_id, device, session, runner)
     else:
-        await _run_nwipe(job_id, device, session, runner)
+        await _run_disk_wipe(job_id, device, session, runner)
 
 
 async def _run_checklist_wipe(
@@ -76,7 +76,7 @@ async def _run_checklist_wipe(
     await runner._set_status(job_id, JobStatus.completed)
 
 
-async def _run_nwipe(
+async def _run_disk_wipe(
     job_id: int,
     device: Device,
     session: Session,

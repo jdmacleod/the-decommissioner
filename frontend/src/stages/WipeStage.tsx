@@ -114,7 +114,7 @@ export function WipeStage({ device, deviceId }: WipeStageProps) {
     )
   }
 
-  // ── HDD/Linux: wiping stage ───────────────────────────────────────────────
+  // ── HDD/USB drives: wiping stage (nwipe on Linux, diskutil on macOS) ────────
   if (device.stage === 'wiping' && !isApple(device)) {
     return (
       <>
@@ -156,7 +156,7 @@ export function WipeStage({ device, deviceId }: WipeStageProps) {
     )
   }
 
-  // ── HDD/Linux: verified stage — start wipe ────────────────────────────────
+  // ── HDD/USB drives: verified stage — start wipe ──────────────────────────
   return (
     <>
       <h3 className="font-semibold text-gray-800 mb-3">Step 5 — Wipe Drive</h3>

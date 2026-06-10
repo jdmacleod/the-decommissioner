@@ -1,5 +1,6 @@
 import shutil
 import subprocess
+import sys
 from datetime import datetime
 from typing import Annotated
 
@@ -10,6 +11,23 @@ from sqlmodel import Session
 from app.core.database import get_session
 from app.models.dependency import Dependency
 from app.models.enums import DependencyStatus, JobType
+
+# diskutil is built into macOS; nwipe is the Linux equivalent.
+_WIPE_DEP = (
+    {
+        "name": "diskutil",
+        "required_for": [JobType.wipe],
+        "version_cmd": ["diskutil", "version"],
+        "install_hint": "Built-in on macOS — no installation needed",
+    }
+    if sys.platform == "darwin"
+    else {
+        "name": "nwipe",
+        "required_for": [JobType.wipe],
+        "version_cmd": ["nwipe", "--version"],
+        "install_hint": "apt install nwipe  (Linux only)",
+    }
+)
 
 # Registry of known external tool dependencies
 REQUIRED = [
@@ -37,12 +55,7 @@ REQUIRED = [
         "version_cmd": ["ideviceinfo", "--version"],
         "install_hint": "brew install libimobiledevice  OR  apt install libimobiledevice-utils",
     },
-    {
-        "name": "nwipe",
-        "required_for": [JobType.wipe],
-        "version_cmd": ["nwipe", "--version"],
-        "install_hint": "apt install nwipe  (Linux only)",
-    },
+    _WIPE_DEP,
 ]
 
 
