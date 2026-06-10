@@ -155,6 +155,9 @@ export function DeviceSidebar() {
         >
           ⚙ Settings
         </Link>
+        <div className="px-4 pt-1 text-xs text-gray-500 select-none">
+          v{__APP_VERSION__}
+        </div>
       </div>
     </aside>
   )
