@@ -1,7 +1,8 @@
 import os
 import subprocess
+from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import select
 
 from app.core.deps import SessionDep
@@ -101,6 +102,23 @@ def init_target(target_id: int, session: SessionDep) -> dict[str, object]:
         "ok": result.returncode == 0,
         "output": (result.stdout or result.stderr).strip(),
     }
+
+
+@router.get("/list-dirs")
+def list_dirs(path: str = Query(default="/")) -> dict[str, object]:
+    """Return immediate subdirectories of a server filesystem path."""
+    base = Path(path).expanduser().resolve()
+    if not base.exists() or not base.is_dir():
+        raise HTTPException(status_code=404, detail=f"Path not found: {path}")
+    try:
+        entries = sorted(
+            ({"name": d.name, "path": str(d)} for d in base.iterdir() if d.is_dir() and not d.name.startswith(".")),
+            key=lambda e: e["name"].lower(),
+        )
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="Permission denied")
+    parent = str(base.parent) if base.parent != base else None
+    return {"path": str(base), "parent": parent, "entries": entries}
 
 
 def _clear_defaults(session: SessionDep, exclude_id: int | None = None) -> None:

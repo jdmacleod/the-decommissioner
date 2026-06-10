@@ -6,6 +6,7 @@ interface StorageTargetCardProps {
   target: StorageTarget
   isEditing: boolean
   testResult?: { ok: boolean; output: string }
+  initResult?: { ok: boolean; output: string }
   onEdit: () => void
   onRemove: () => void
   onTest: () => void
@@ -21,6 +22,7 @@ export function StorageTargetCard({
   target,
   isEditing,
   testResult,
+  initResult,
   onEdit,
   onRemove,
   onTest,
@@ -115,6 +117,21 @@ export function StorageTargetCard({
               {testResult.ok ? '✓ Connected' : '✗ Failed'}
               {testResult.output && (
                 <div className="text-gray-500 mt-1 truncate">{testResult.output}</div>
+              )}
+            </div>
+          )}
+
+          {initResult !== undefined && (
+            <div
+              className={`mt-2 text-xs font-mono p-2 rounded ${
+                initResult.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+              }`}
+            >
+              {initResult.ok ? '✓ Repository initialized' : '✗ Init failed'}
+              {initResult.output && (
+                <pre className="mt-1 whitespace-pre-wrap text-gray-600 text-xs max-h-32 overflow-y-auto">
+                  {initResult.output}
+                </pre>
               )}
             </div>
           )}

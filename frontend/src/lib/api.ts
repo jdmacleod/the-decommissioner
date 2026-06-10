@@ -109,6 +109,11 @@ export const testStorageTarget = (id: number) =>
 export const initStorageTarget = (id: number) =>
   request<{ ok: boolean; output: string }>(`/storage-targets/${id}/init`, { method: 'POST' })
 
+export interface DirEntry { name: string; path: string }
+export interface DirListing { path: string; parent: string | null; entries: DirEntry[] }
+export const listDirs = (path: string) =>
+  request<DirListing>(`/storage-targets/list-dirs?path=${encodeURIComponent(path)}`)
+
 // Snapshots
 export const getSnapshots = (deviceId: number) =>
   request<Snapshot[]>(`/devices/${deviceId}/snapshots`)

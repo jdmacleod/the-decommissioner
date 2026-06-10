@@ -105,4 +105,15 @@ describe('StorageTargetCard', () => {
     render(makeTarget(), { testResult: { ok: false, output: 'error' } })
     await waitFor(() => screen.getByText(/Failed/))
   })
+
+  it('shows init success result when initResult.ok is true', async () => {
+    render(makeTarget(), { initResult: { ok: true, output: 'created restic repository' } })
+    await waitFor(() => screen.getByText(/Repository initialized/))
+  })
+
+  it('shows init failure result with output when initResult.ok is false', async () => {
+    render(makeTarget(), { initResult: { ok: false, output: 'Fatal: create key in repository at /bad: ...' } })
+    await waitFor(() => screen.getByText(/Init failed/))
+    expect(screen.getByText(/Fatal: create key/)).toBeInTheDocument()
+  })
 })

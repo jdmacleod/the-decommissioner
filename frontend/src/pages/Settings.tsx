@@ -30,6 +30,7 @@ export function Settings() {
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [testResults, setTestResults] = useState<Record<number, { ok: boolean; output: string }>>({})
+  const [initResults, setInitResults] = useState<Record<number, { ok: boolean; output: string }>>({})
 
   const addTarget = useMutation({
     mutationFn: (values: StorageTargetFormValues) => createStorageTarget(values),
@@ -51,7 +52,10 @@ export function Settings() {
 
   const initTarget = useMutation({
     mutationFn: (id: number) => initStorageTarget(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['storage-targets'] }),
+    onSuccess: (data, id) => {
+      setInitResults((prev) => ({ ...prev, [id]: data }))
+      if (data.ok) queryClient.invalidateQueries({ queryKey: ['storage-targets'] })
+    },
   })
 
   const saveEdit = useMutation({
@@ -112,6 +116,7 @@ export function Settings() {
               isTestPending={testTarget.isPending}
               isInitPending={initTarget.isPending}
               isEditPending={saveEdit.isPending}
+              initResult={initResults[t.id]}
             />
           ))}
         </div>
