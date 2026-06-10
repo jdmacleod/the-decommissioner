@@ -164,7 +164,9 @@ async def run_wipe_handler(
     get_session: Any,
 ) -> None:
     from app.engines.wipe import APPLE_DEVICE_TYPES as _APPLE_TYPES
+    from app.engines.wipe import USB_DEVICE_TYPES as _USB_TYPES
     from app.engines.wipe import run_wipe
+    from app.models.enums import StorageType
 
     with get_session() as bg_session:
         bg_device = bg_session.get(Device, device_id)
@@ -174,12 +176,19 @@ async def run_wipe_handler(
         _set_stage(device_id, prev_stage, get_session)
         return
 
-    # Apple devices: stay in wiping — user must click "Mark as Wiped"
-    # Hardware devices: advance to wiped automatically
+    # Checklist-based wipe paths (Apple, USB flash, SSD) stay in wiping —
+    # user must complete the checklist and click "Mark as Wiped".
+    # Overwrite-based paths (HDD / unknown) advance to wiped automatically.
     with get_session() as s:
         d = s.get(Device, device_id)
-        if d and d.device_type not in _APPLE_TYPES:
-            d.stage = DeviceStage.wiped
-            d.updated_at = datetime.utcnow()
-            s.add(d)
-            s.commit()
+        if d:
+            is_checklist = (
+                d.device_type in _APPLE_TYPES
+                or d.device_type in _USB_TYPES
+                or d.storage_type == StorageType.ssd
+            )
+            if not is_checklist:
+                d.stage = DeviceStage.wiped
+                d.updated_at = datetime.utcnow()
+                s.add(d)
+                s.commit()

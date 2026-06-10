@@ -64,7 +64,7 @@ import { getDevice, getDupStats, triggerJob } from '../lib/api'
 const makeDevice = (overrides = {}) => ({
   id: 1, name: 'Test MBP', device_type: 'mac' as const, stage: 'registered' as const,
   source_path: '/Users/test', serial_number: null, notes: null,
-  created_at: '', updated_at: '',
+  storage_type: 'unknown' as const, created_at: '', updated_at: '',
   ...overrides,
 })
 

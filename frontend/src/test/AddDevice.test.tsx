@@ -16,7 +16,7 @@ import { createDevice, detectIos, detectVolumes, uploadDevicePhoto } from '../li
 const newDevice = {
   id: 1, name: 'My Drive', device_type: 'hard_drive' as const, stage: 'registered' as const,
   source_path: null, serial_number: null, notes: null,
-  created_at: '', updated_at: '',
+  storage_type: 'unknown' as const, created_at: '', updated_at: '',
 }
 
 beforeEach(() => {

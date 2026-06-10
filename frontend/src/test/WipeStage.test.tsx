@@ -10,6 +10,8 @@ vi.mock('../lib/api', () => ({
   triggerJob: vi.fn(),
   updateChecklist: vi.fn(),
   markWiped: vi.fn(),
+  detectStorageType: vi.fn(),
+  updateDevice: vi.fn(),
 }))
 
 vi.mock('../components/JobLog', () => ({
@@ -18,7 +20,7 @@ vi.mock('../components/JobLog', () => ({
   ),
 }))
 
-import { getDeviceJobs, triggerJob, updateChecklist, markWiped } from '../lib/api'
+import { getDeviceJobs, triggerJob, updateChecklist, markWiped, detectStorageType, updateDevice } from '../lib/api'
 
 const makeDevice = (overrides: Partial<Device> = {}): Device => ({
   id: 1,
@@ -28,6 +30,7 @@ const makeDevice = (overrides: Partial<Device> = {}): Device => ({
   source_path: '/dev/sdb',
   serial_number: null,
   notes: null,
+  storage_type: 'hdd',
   created_at: '',
   updated_at: '',
   ...overrides,
@@ -59,6 +62,8 @@ beforeEach(() => {
   vi.mocked(triggerJob).mockResolvedValue({ job_id: 99, status: 'pending' })
   vi.mocked(updateChecklist).mockResolvedValue(makeWipeJob())
   vi.mocked(markWiped).mockResolvedValue(makeDevice({ stage: 'wiped' }))
+  vi.mocked(detectStorageType).mockResolvedValue(makeDevice({ storage_type: 'ssd' }))
+  vi.mocked(updateDevice).mockResolvedValue(makeDevice({ storage_type: 'hdd' }))
 })
 
 const render = (device: Device) =>
@@ -226,5 +231,128 @@ describe('WipeStage — network_volume device', () => {
     vi.mocked(getDeviceJobs).mockResolvedValue([makeWipeJob()])
     render(makeDevice({ device_type: 'network_volume', stage: 'wiping', source_path: '/Volumes/MyShare' }))
     await waitFor(() => screen.getByRole('button', { name: /mark as wiped/i }))
+  })
+})
+
+describe('WipeStage — USB flash device', () => {
+  it('shows Begin Erase Checklist button for verified usb_drive', async () => {
+    render(makeDevice({ device_type: 'usb_drive', storage_type: 'unknown' }))
+    await waitFor(() => screen.getByRole('button', { name: /begin erase checklist/i }))
+  })
+
+  it('shows flash storage notice for usb_drive', async () => {
+    render(makeDevice({ device_type: 'usb_drive', storage_type: 'unknown' }))
+    await waitFor(() => screen.getByText(/nand flash/i))
+  })
+
+  it('Begin Erase Checklist disabled before confirmation for usb_drive', async () => {
+    render(makeDevice({ device_type: 'usb_drive', storage_type: 'unknown' }))
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /begin erase checklist/i })).toBeDisabled()
+    })
+  })
+
+  it('shows SSD checklist for wiping usb_drive', async () => {
+    vi.mocked(getDeviceJobs).mockResolvedValue([
+      makeWipeJob({
+        job_metadata: JSON.stringify({
+          method: 'usb_flash_checklist',
+          checklist_items: [{ label: 'Reformat the drive', done: false }],
+        }),
+      }),
+    ])
+    render(makeDevice({ device_type: 'usb_drive', stage: 'wiping', storage_type: 'unknown' }))
+    await waitFor(() => screen.getByText('Reformat the drive'))
+  })
+})
+
+describe('WipeStage — SSD hard drive', () => {
+  it('shows Begin Erase Checklist for verified SSD hard_drive', async () => {
+    render(makeDevice({ storage_type: 'ssd' }))
+    await waitFor(() => screen.getByRole('button', { name: /begin erase checklist/i }))
+  })
+
+  it('shows SSD notice for verified SSD hard_drive', async () => {
+    render(makeDevice({ storage_type: 'ssd' }))
+    await waitFor(() => screen.getByText(/multi-pass overwrite is ineffective/i))
+  })
+
+  it('Begin Erase Checklist disabled before confirmation for SSD', async () => {
+    render(makeDevice({ storage_type: 'ssd' }))
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /begin erase checklist/i })).toBeDisabled()
+    })
+  })
+
+  it('shows SSD checklist items when SSD device is wiping', async () => {
+    vi.mocked(getDeviceJobs).mockResolvedValue([
+      makeWipeJob({
+        job_metadata: JSON.stringify({
+          method: 'ssd_checklist',
+          checklist_items: [{ label: 'Open Disk Utility', done: false }],
+        }),
+      }),
+    ])
+    render(makeDevice({ stage: 'wiping', storage_type: 'ssd' }))
+    await waitFor(() => screen.getByText('Open Disk Utility'))
+  })
+
+  it('shows Change to HDD affordance for SSD device', async () => {
+    render(makeDevice({ storage_type: 'ssd' }))
+    await waitFor(() => screen.getByText(/change to hdd/i))
+  })
+})
+
+describe('WipeStage — unknown storage type', () => {
+  it('shows Auto-detect button when storage type is unknown', async () => {
+    render(makeDevice({ storage_type: 'unknown' }))
+    await waitFor(() => screen.getByRole('button', { name: /auto-detect/i }))
+  })
+
+  it('shows manual HDD/SSD selector when storage type is unknown', async () => {
+    render(makeDevice({ storage_type: 'unknown' }))
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /hdd/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /ssd/i })).toBeInTheDocument()
+    })
+  })
+
+  it('does not show Start Wipe when storage type is unknown', async () => {
+    render(makeDevice({ storage_type: 'unknown' }))
+    await waitFor(() => screen.getByRole('button', { name: /auto-detect/i }))
+    expect(screen.queryByRole('button', { name: /start wipe/i })).not.toBeInTheDocument()
+  })
+
+  it('calls detectStorageType when Auto-detect is clicked', async () => {
+    render(makeDevice({ storage_type: 'unknown' }))
+    await waitFor(() => screen.getByRole('button', { name: /auto-detect/i }))
+    await userEvent.click(screen.getByRole('button', { name: /auto-detect/i }))
+    await waitFor(() => expect(detectStorageType).toHaveBeenCalledWith(1))
+  })
+
+  it('calls updateDevice with ssd when SSD button is clicked', async () => {
+    render(makeDevice({ storage_type: 'unknown' }))
+    await waitFor(() => screen.getByRole('button', { name: /ssd/i }))
+    await userEvent.click(screen.getByRole('button', { name: /ssd/i }))
+    await waitFor(() => expect(updateDevice).toHaveBeenCalledWith(1, { storage_type: 'ssd' }))
+  })
+
+  it('calls updateDevice with hdd when HDD button is clicked', async () => {
+    render(makeDevice({ storage_type: 'unknown' }))
+    await waitFor(() => screen.getByRole('button', { name: /hdd/i }))
+    await userEvent.click(screen.getByRole('button', { name: /hdd/i }))
+    await waitFor(() => expect(updateDevice).toHaveBeenCalledWith(1, { storage_type: 'hdd' }))
+  })
+
+  it('shows Change to SSD affordance for HDD device', async () => {
+    render(makeDevice({ storage_type: 'hdd' }))
+    await waitFor(() => screen.getByText(/change to ssd/i))
+  })
+
+  it('calls updateDevice when Change to HDD is clicked from SSD view', async () => {
+    render(makeDevice({ storage_type: 'ssd' }))
+    await waitFor(() => screen.getByText(/change to hdd/i))
+    await userEvent.click(screen.getByText(/change to hdd/i))
+    await waitFor(() => expect(updateDevice).toHaveBeenCalledWith(1, { storage_type: 'hdd' }))
   })
 })

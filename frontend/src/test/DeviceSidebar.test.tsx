@@ -20,7 +20,7 @@ import type { DeviceStage, DeviceType } from '../types/api'
 
 const makeDevice = (id: number, name: string, stage: DeviceStage = 'registered', device_type: DeviceType = 'mac') => ({
   id, name, stage, device_type, source_path: null, serial_number: null, notes: null,
-  created_at: '', updated_at: '',
+  storage_type: 'unknown' as const, created_at: '', updated_at: '',
 })
 
 beforeEach(() => {

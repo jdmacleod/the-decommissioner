@@ -24,7 +24,7 @@ import { getDevice, getDuplicateGroups, getDupStats, resolveGroup, autoResolveGr
 
 const mockDevice = {
   id: 1, name: 'Test Drive', device_type: 'hard_drive' as const, stage: 'analyzing' as const,
-  source_path: '/data', serial_number: null, notes: null, created_at: '', updated_at: '',
+  source_path: '/data', serial_number: null, notes: null, storage_type: 'unknown' as const, created_at: '', updated_at: '',
 }
 
 const mockGroup = {

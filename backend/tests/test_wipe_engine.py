@@ -8,13 +8,15 @@ from sqlmodel import Session
 
 from app.engines.wipe import (
     APPLE_DEVICE_TYPES,
+    USB_DEVICE_TYPES,
     _find_device_for_mount,
     _resolve_block_device,
     _run_checklist_wipe,
     _run_disk_wipe,
+    _run_ssd_checklist_wipe,
     run_wipe,
 )
-from app.models.enums import DeviceType, JobStatus, JobType
+from app.models.enums import DeviceType, JobStatus, JobType, StorageType
 from tests.conftest import make_device, make_job
 
 # ── _find_device_for_mount ────────────────────────────────────────────────────
@@ -334,3 +336,171 @@ async def test_network_volume_checklist_content(session: Session):
         "disconnect" in label.lower() or "eject" in label.lower() or "umount" in label.lower()
         for label in labels
     )
+
+
+# ── USB_DEVICE_TYPES constant ─────────────────────────────────────────────────
+
+
+def test_usb_device_types_contains_usb_drive():
+    assert DeviceType.usb_drive in USB_DEVICE_TYPES
+    assert DeviceType.hard_drive not in USB_DEVICE_TYPES
+
+
+# ── SSD/USB dispatch ──────────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_usb_drive_dispatches_to_ssd_checklist(session: Session):
+    device = make_device(session, device_type="usb_drive", stage="verified", source_path="/Volumes/USB")
+    job = make_job(session, device.id, job_type=JobType.wipe)
+
+    dispatched = []
+
+    async def fake_ssd_checklist(jid, dev, sess, runner):
+        dispatched.append("ssd_checklist")
+
+    with (
+        patch("app.engines.wipe._run_checklist_wipe", AsyncMock()),
+        patch("app.engines.wipe._run_ssd_checklist_wipe", fake_ssd_checklist),
+        patch("app.engines.wipe._run_disk_wipe", AsyncMock()),
+    ):
+        await run_wipe(job.id, device, session, MagicMock())
+
+    assert dispatched == ["ssd_checklist"]
+
+
+@pytest.mark.asyncio
+async def test_hdd_storage_type_dispatches_to_disk_wipe(session: Session):
+    device = make_device(
+        session, device_type="hard_drive", stage="verified", source_path="/mnt/drive"
+    )
+    device.storage_type = StorageType.hdd
+    session.add(device)
+    session.commit()
+    job = make_job(session, device.id, job_type=JobType.wipe)
+
+    dispatched = []
+
+    async def fake_disk_wipe(jid, dev, sess, runner):
+        dispatched.append("disk_wipe")
+
+    with (
+        patch("app.engines.wipe._run_checklist_wipe", AsyncMock()),
+        patch("app.engines.wipe._run_ssd_checklist_wipe", AsyncMock()),
+        patch("app.engines.wipe._run_disk_wipe", fake_disk_wipe),
+    ):
+        await run_wipe(job.id, device, session, MagicMock())
+
+    assert dispatched == ["disk_wipe"]
+
+
+@pytest.mark.asyncio
+async def test_ssd_storage_type_dispatches_to_ssd_checklist(session: Session):
+    device = make_device(
+        session, device_type="hard_drive", stage="verified", source_path="/mnt/drive"
+    )
+    device.storage_type = StorageType.ssd
+    session.add(device)
+    session.commit()
+    job = make_job(session, device.id, job_type=JobType.wipe)
+
+    dispatched = []
+
+    async def fake_ssd_checklist(jid, dev, sess, runner):
+        dispatched.append("ssd_checklist")
+
+    with (
+        patch("app.engines.wipe._run_checklist_wipe", AsyncMock()),
+        patch("app.engines.wipe._run_ssd_checklist_wipe", fake_ssd_checklist),
+        patch("app.engines.wipe._run_disk_wipe", AsyncMock()),
+    ):
+        await run_wipe(job.id, device, session, MagicMock())
+
+    assert dispatched == ["ssd_checklist"]
+
+
+@pytest.mark.asyncio
+async def test_unknown_storage_type_dispatches_to_disk_wipe(session: Session):
+    device = make_device(
+        session, device_type="hard_drive", stage="verified", source_path="/mnt/drive"
+    )
+    # Default storage_type is 'unknown' — falls through to overwrite path
+    job = make_job(session, device.id, job_type=JobType.wipe)
+
+    dispatched = []
+
+    async def fake_disk_wipe(jid, dev, sess, runner):
+        dispatched.append("disk_wipe")
+
+    with (
+        patch("app.engines.wipe._run_checklist_wipe", AsyncMock()),
+        patch("app.engines.wipe._run_ssd_checklist_wipe", AsyncMock()),
+        patch("app.engines.wipe._run_disk_wipe", fake_disk_wipe),
+    ):
+        await run_wipe(job.id, device, session, MagicMock())
+
+    assert dispatched == ["disk_wipe"]
+
+
+# ── _run_ssd_checklist_wipe ───────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_ssd_checklist_darwin_content(session: Session, monkeypatch):
+    monkeypatch.setattr("sys.platform", "darwin")
+    device = make_device(session, device_type="hard_drive", source_path="/mnt/drive")
+    device.storage_type = StorageType.ssd
+    session.add(device)
+    session.commit()
+    job = make_job(session, device.id, job_type=JobType.wipe)
+
+    runner = MagicMock()
+    runner._set_status = AsyncMock()
+
+    await _run_ssd_checklist_wipe(job.id, device, session, runner)
+
+    session.refresh(job)
+    meta = json.loads(job.job_metadata)
+    assert meta["method"] == "ssd_checklist"
+    labels = [item["label"] for item in meta["checklist_items"]]
+    assert any("disk utility" in label.lower() for label in labels)
+    assert any("backup" in label.lower() for label in labels)
+
+
+@pytest.mark.asyncio
+async def test_ssd_checklist_linux_content(session: Session, monkeypatch):
+    monkeypatch.setattr("sys.platform", "linux")
+    device = make_device(session, device_type="hard_drive", source_path="/mnt/drive")
+    device.storage_type = StorageType.ssd
+    session.add(device)
+    session.commit()
+    job = make_job(session, device.id, job_type=JobType.wipe)
+
+    runner = MagicMock()
+    runner._set_status = AsyncMock()
+
+    await _run_ssd_checklist_wipe(job.id, device, session, runner)
+
+    session.refresh(job)
+    meta = json.loads(job.job_metadata)
+    assert meta["method"] == "ssd_checklist"
+    labels = [item["label"] for item in meta["checklist_items"]]
+    assert any("hdparm" in label.lower() for label in labels)
+
+
+@pytest.mark.asyncio
+async def test_usb_checklist_content(session: Session, monkeypatch):
+    monkeypatch.setattr("sys.platform", "darwin")
+    device = make_device(session, device_type="usb_drive", source_path="/Volumes/USB")
+    job = make_job(session, device.id, job_type=JobType.wipe)
+
+    runner = MagicMock()
+    runner._set_status = AsyncMock()
+
+    await _run_ssd_checklist_wipe(job.id, device, session, runner)
+
+    session.refresh(job)
+    meta = json.loads(job.job_metadata)
+    assert meta["method"] == "usb_flash_checklist"
+    labels = [item["label"] for item in meta["checklist_items"]]
+    assert any("usb" in label.lower() or "flash" in label.lower() for label in labels)

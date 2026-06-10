@@ -21,6 +21,7 @@ const makeDevice = (overrides: Partial<Device> = {}): Device => ({
   serial_number: null,
   notes: null,
   created_at: '',
+  storage_type: 'unknown',
   updated_at: '',
   ...overrides,
 })

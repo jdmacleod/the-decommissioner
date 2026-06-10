@@ -1,4 +1,5 @@
 export type DeviceType = 'mac' | 'linux' | 'iphone' | 'ipad' | 'usb_drive' | 'hard_drive' | 'network_volume'
+export type StorageType = 'hdd' | 'ssd' | 'unknown'
 
 export type DeviceStage =
   | 'registered' | 'cataloging' | 'cataloged'
@@ -19,6 +20,7 @@ export interface Device {
   serial_number: string | null
   notes: string | null
   stage: DeviceStage
+  storage_type: StorageType
   staging_path?: string | null
   photo_path?: string | null
   created_at: string

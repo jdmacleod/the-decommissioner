@@ -17,7 +17,7 @@ from app.core.deps import SessionDep, get_runner
 from app.core.job_factory import create_job
 from app.models.device import Device, DeviceCreate, DeviceRead, DeviceUpdate
 from app.models.duplicate_group import DuplicateGroup
-from app.models.enums import DeviceStage, JobStatus, JobType
+from app.models.enums import DeviceStage, JobStatus, JobType, StorageType
 from app.models.job import Job
 
 PHOTO_MAX_BYTES = 5 * 1024 * 1024  # 5 MB
@@ -507,6 +507,72 @@ def mark_recycled(device_id: int, session: SessionDep) -> Device:
             detail=f"Device is in stage '{device.stage}', not 'wiped'",
         )
     device.stage = DeviceStage.recycled
+    device.updated_at = datetime.utcnow()
+    session.add(device)
+    session.commit()
+    session.refresh(device)
+    return device
+
+
+# ── Storage type detection ────────────────────────────────────────────────────
+
+
+def _detect_storage_type(block_device: str) -> StorageType:
+    """Return hdd/ssd based on the block device, or unknown on failure."""
+    if sys.platform == "darwin":
+        try:
+            import plistlib
+
+            result = subprocess.run(
+                ["diskutil", "info", "-plist", block_device],
+                capture_output=True,
+                timeout=10,
+            )
+            if result.returncode == 0:
+                info = plistlib.loads(result.stdout)
+                solid_state = info.get("SolidState")
+                if solid_state is True:
+                    return StorageType.ssd
+                if solid_state is False:
+                    return StorageType.hdd
+        except Exception:
+            pass
+    else:
+        try:
+            dev_name = block_device.lstrip("/").split("/")[-1]  # /dev/sdb → sdb
+            rotational = (
+                subprocess.run(
+                    ["cat", f"/sys/block/{dev_name}/queue/rotational"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                .stdout.strip()
+            )
+            if rotational == "0":
+                return StorageType.ssd
+            if rotational == "1":
+                return StorageType.hdd
+        except Exception:
+            pass
+    return StorageType.unknown
+
+
+@router.post("/{device_id}/detect-storage", response_model=DeviceRead)
+def detect_storage(device_id: int, session: SessionDep) -> Device:
+    """Auto-detect whether the device's storage is SSD or HDD and save the result."""
+    from app.engines.wipe import _resolve_block_device
+
+    device = session.get(Device, device_id)
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    if not device.source_path:
+        raise HTTPException(status_code=409, detail="Device has no source_path for detection")
+
+    block_device = _resolve_block_device(device.source_path)
+    storage_type = _detect_storage_type(block_device)
+
+    device.storage_type = storage_type
     device.updated_at = datetime.utcnow()
     session.add(device)
     session.commit()

@@ -153,6 +153,9 @@ export const updateStorageTarget = (id: number, body: StorageTargetUpdate) =>
 export const clearStaging = (deviceId: number) =>
   request<Device>(`/devices/${deviceId}/clear-staging`, { method: 'POST' })
 
+export const detectStorageType = (deviceId: number) =>
+  request<Device>(`/devices/${deviceId}/detect-storage`, { method: 'POST' })
+
 // Detect mounted volumes (for HDD/USB source path selection)
 export const detectVolumes = () =>
   request<VolumeEntry[]>('/devices/detect-volumes')

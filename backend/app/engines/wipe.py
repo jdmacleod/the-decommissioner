@@ -6,10 +6,11 @@ from sqlmodel import Session
 
 from app.core.runner import SubprocessRunner
 from app.models.device import Device
-from app.models.enums import DeviceType, JobStatus
+from app.models.enums import DeviceType, JobStatus, StorageType
 from app.models.job import Job
 
 APPLE_DEVICE_TYPES = {DeviceType.mac, DeviceType.iphone, DeviceType.ipad, DeviceType.network_volume}
+USB_DEVICE_TYPES = {DeviceType.usb_drive}
 
 APPLE_CHECKLIST: dict[DeviceType, list[str]] = {
     DeviceType.iphone: [
@@ -32,10 +33,13 @@ APPLE_CHECKLIST: dict[DeviceType, list[str]] = {
     DeviceType.mac: [
         "Back up complete (verified via this app)",
         "Sign out of iCloud: System Settings → Apple ID → Sign Out",
-        "Sign out of Messages: Messages → Preferences → iMessage → Sign Out",
+        "Sign out of Messages: Messages → Settings → iMessage → Sign Out",
         "Unpair Bluetooth accessories",
-        "Erase Mac: System Settings → General → Transfer or Reset → Erase All Content",
-        "Device shows Setup Assistant screen (confirms erasure complete)",
+        "Erase Mac (Erase Assistant — Apple Silicon M1+ or Intel T2, macOS Monterey+): "
+        "System Settings → General → Transfer or Reset → Erase All Content and Settings",
+        "Older Intel Macs only (pre-T2 or macOS < Monterey): "
+        "Restart into Recovery (⌘R at boot) → Disk Utility → Erase, then reinstall macOS",
+        "Device shows Setup Assistant / Hello screen (confirms erasure complete)",
     ],
     DeviceType.network_volume: [
         "Backup complete and verified — all files accounted for in the restic snapshot",
@@ -43,6 +47,40 @@ APPLE_CHECKLIST: dict[DeviceType, list[str]] = {
         "Disconnect the share: Finder → right-click volume → Eject, or run `umount <path>`",
     ],
 }
+
+# SSD/flash erasure checklists — overwrite wipe is ineffective on SSDs.
+_SSD_CHECKLIST_DARWIN = [
+    "Verify backup is complete — all files accounted for in the restic snapshot",
+    "Open Disk Utility (Applications → Utilities → Disk Utility)",
+    "Select the drive in the sidebar (the top-level device, not an individual volume)",
+    "Click Erase, choose a format (APFS or ExFAT), then click Erase",
+    "macOS Disk Utility performs a cryptographic erase — all data is rendered irrecoverable",
+    "Confirm the drive shows as empty / reformatted",
+]
+
+_SSD_CHECKLIST_LINUX = [
+    "Verify backup is complete — all files accounted for in the restic snapshot",
+    "Check ATA Secure Erase support: sudo hdparm -I <device> | grep -i security",
+    "If supported — set a temporary password and erase: "
+    "sudo hdparm --security-set-pass p <device> && sudo hdparm --security-erase p <device>",
+    "If ATA Secure Erase is unsupported — single-pass overwrite: "
+    "sudo dd if=/dev/urandom of=<device> bs=4M status=progress",
+    "Confirm the drive shows no readable data: sudo hexdump -C <device> | head",
+]
+
+_USB_CHECKLIST_DARWIN = [
+    "Verify backup is complete — all files accounted for in the restic snapshot",
+    "USB flash drives do not support ATA Secure Erase — reformat to erase all data",
+    "Open Disk Utility → select the drive → click Erase → choose ExFAT or FAT32 → click Erase",
+    "Confirm the drive shows as empty / reformatted",
+]
+
+_USB_CHECKLIST_LINUX = [
+    "Verify backup is complete — all files accounted for in the restic snapshot",
+    "USB flash drives do not support ATA Secure Erase — reformat to erase all data",
+    "Run: sudo wipefs -a <device>  OR  sudo mkfs.vfat <device>",
+    "Confirm the drive shows as empty / reformatted",
+]
 
 
 async def run_wipe(
@@ -53,7 +91,12 @@ async def run_wipe(
 ) -> None:
     if device.device_type in APPLE_DEVICE_TYPES:
         await _run_checklist_wipe(job_id, device, session, runner)
+    elif device.device_type in USB_DEVICE_TYPES:
+        await _run_ssd_checklist_wipe(job_id, device, session, runner)
+    elif device.storage_type == StorageType.ssd:
+        await _run_ssd_checklist_wipe(job_id, device, session, runner)
     else:
+        # hdd or unknown — overwrite path
         await _run_disk_wipe(job_id, device, session, runner)
 
 
@@ -66,6 +109,31 @@ async def _run_checklist_wipe(
     items = APPLE_CHECKLIST.get(device.device_type, [])
     checklist = [{"label": label, "done": False} for label in items]
     metadata = json.dumps({"method": "apple_checklist", "checklist_items": checklist})
+
+    job = session.get(Job, job_id)
+    if job:
+        job.job_metadata = metadata
+        session.add(job)
+        session.commit()
+
+    await runner._set_status(job_id, JobStatus.completed)
+
+
+async def _run_ssd_checklist_wipe(
+    job_id: int,
+    device: Device,
+    session: Session,
+    runner: SubprocessRunner,
+) -> None:
+    if device.device_type in USB_DEVICE_TYPES:
+        items = _USB_CHECKLIST_DARWIN if sys.platform == "darwin" else _USB_CHECKLIST_LINUX
+        method = "usb_flash_checklist"
+    else:
+        items = _SSD_CHECKLIST_DARWIN if sys.platform == "darwin" else _SSD_CHECKLIST_LINUX
+        method = "ssd_checklist"
+
+    checklist = [{"label": label, "done": False} for label in items]
+    metadata = json.dumps({"method": method, "checklist_items": checklist})
 
     job = session.get(Job, job_id)
     if job:

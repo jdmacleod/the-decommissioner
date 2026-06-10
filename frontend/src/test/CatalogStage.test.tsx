@@ -30,6 +30,7 @@ const makeDevice = (overrides: Partial<Device> = {}): Device => ({
   notes: null,
   staging_path: null,
   created_at: '',
+  storage_type: 'unknown',
   updated_at: '',
   ...overrides,
 })

@@ -21,7 +21,7 @@ import { getDevice, getFileEntries, bulkUpdateFileStatus } from '../lib/api'
 
 const mockDevice = {
   id: 1, name: 'My Drive', device_type: 'hard_drive' as const, stage: 'cataloged' as const,
-  source_path: '/data', serial_number: null, notes: null, created_at: '', updated_at: '',
+  source_path: '/data', serial_number: null, notes: null, storage_type: 'unknown' as const, created_at: '', updated_at: '',
 }
 
 import type { FileStatus } from '../types/api'

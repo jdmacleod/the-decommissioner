@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 from sqlmodel import Field, Relationship, SQLModel
 
-from app.models.enums import DeviceStage, DeviceType
+from app.models.enums import DeviceStage, DeviceType, StorageType
 
 if TYPE_CHECKING:
     from app.models.file_entry import FileEntry
@@ -22,6 +22,7 @@ class DeviceBase(SQLModel):
 class Device(DeviceBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
     stage: DeviceStage = DeviceStage.registered
+    storage_type: StorageType = StorageType.unknown
     staging_path: str | None = None
     photo_path: str | None = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -39,6 +40,7 @@ class DeviceCreate(DeviceBase):
 class DeviceRead(DeviceBase):
     id: int
     stage: DeviceStage
+    storage_type: StorageType
     staging_path: str | None = None
     photo_path: str | None = None
     created_at: datetime
@@ -52,4 +54,5 @@ class DeviceUpdate(SQLModel):
     serial_number: str | None = None
     notes: str | None = None
     stage: DeviceStage | None = None
+    storage_type: StorageType | None = None
     staging_path: str | None = None

@@ -60,3 +60,9 @@ class DependencyStatus(StrEnum):
     found = "found"
     missing = "missing"
     wrong_version = "wrong_version"
+
+
+class StorageType(StrEnum):
+    hdd = "hdd"
+    ssd = "ssd"
+    unknown = "unknown"

@@ -898,3 +898,43 @@ def test_delete_photo_no_photo(client: TestClient, session: Session) -> None:
 
 def test_delete_photo_not_found(client: TestClient) -> None:
     assert client.delete("/api/devices/99/photo").status_code == 404
+
+
+# ── detect-storage ────────────────────────────────────────────────────────────
+
+
+def test_detect_storage_not_found(client: TestClient) -> None:
+    assert client.post("/api/devices/99/detect-storage").status_code == 404
+
+
+def test_detect_storage_no_source_path(client: TestClient, session: Session) -> None:
+    make_device(session, source_path=None, device_type="iphone")
+    assert client.post("/api/devices/1/detect-storage").status_code == 409
+
+
+def test_detect_storage_updates_device(client: TestClient, session: Session) -> None:
+    from unittest.mock import patch
+
+    from app.models.enums import StorageType
+
+    make_device(session, source_path="/mnt/drive")
+
+    with patch("app.api.devices._detect_storage_type", return_value=StorageType.ssd):
+        r = client.post("/api/devices/1/detect-storage")
+
+    assert r.status_code == 200
+    assert r.json()["storage_type"] == "ssd"
+
+
+def test_detect_storage_unknown_on_failure(client: TestClient, session: Session) -> None:
+    from unittest.mock import patch
+
+    from app.models.enums import StorageType
+
+    make_device(session, source_path="/mnt/drive")
+
+    with patch("app.api.devices._detect_storage_type", return_value=StorageType.unknown):
+        r = client.post("/api/devices/1/detect-storage")
+
+    assert r.status_code == 200
+    assert r.json()["storage_type"] == "unknown"
