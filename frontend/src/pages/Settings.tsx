@@ -82,97 +82,103 @@ export function Settings() {
   })
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <h2 className="text-xl font-bold text-gray-900 mb-6">Settings</h2>
-
-      {/* Storage Targets */}
-      <div className="bg-white border border-gray-200 rounded-lg p-5 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-gray-800">Storage Target</h3>
-          {!showAddForm && (
-            <Button variant="outline" size="sm" onClick={() => setShowAddForm(true)}>
-              + Add
-            </Button>
-          )}
-        </div>
-
-        {showAddForm && (
-          <div className="border border-gray-100 rounded p-3 mb-4">
-            <StorageTargetForm
-              onSubmit={(values) => addTarget.mutate(values)}
-              onCancel={() => setShowAddForm(false)}
-              isPending={addTarget.isPending}
-              submitLabel="Add Target"
-            />
-          </div>
-        )}
-
-        {targets.length === 0 && !showAddForm && (
-          <p className="text-sm text-gray-400">No storage targets configured.</p>
-        )}
-
-        <div className="space-y-3">
-          {targets.map((t) => (
-            <StorageTargetCard
-              key={t.id}
-              target={t}
-              isEditing={editingId === t.id}
-              testResult={testResults[t.id]}
-              onEdit={() => setEditingId(t.id)}
-              onCancelEdit={() => setEditingId(null)}
-              onRemove={() => removeTarget.mutate(t.id)}
-              onTest={() => testTarget.mutate(t.id)}
-              onInit={() => initTarget.mutate(t.id)}
-              onSaveEdit={(values) => saveEdit.mutate({ id: t.id, values })}
-              isTestPending={testTarget.isPending}
-              isInitPending={initTarget.isPending}
-              isEditPending={saveEdit.isPending}
-              initResult={initResults[t.id]}
-            />
-          ))}
-        </div>
+    <div>
+      <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <h1 className="text-xl font-bold text-gray-900">Settings</h1>
+        <p className="text-xs text-gray-400 mt-0.5">Storage targets and system health</p>
       </div>
+      <div className="p-6 max-w-2xl">
+        {/* Storage Targets */}
+        <div className="bg-white border border-gray-200 rounded-lg p-5 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-gray-800">Storage Target</h3>
+            {!showAddForm && (
+              <Button variant="outline" size="sm" onClick={() => setShowAddForm(true)}>
+                + Add
+              </Button>
+            )}
+          </div>
 
-      {/* System Health */}
-      <div className="bg-white border border-gray-200 rounded-lg p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-gray-800">System Health</h3>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => recheck.mutate()}
-            disabled={recheck.isPending}
-          >
-            {recheck.isPending ? 'Checking…' : 'Re-check'}
-          </Button>
-        </div>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-xs text-gray-400 uppercase text-left border-b border-gray-100">
-              <th className="pb-2 pr-4">Tool</th>
-              <th className="pb-2 pr-4">Status</th>
-              <th className="pb-2">Version</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {deps.map((dep) => (
-              <tr key={dep.name}>
-                <td className="py-2 pr-4">
-                  <div className="font-mono text-xs">{dep.name}</div>
-                  {dep.status !== 'found' && dep.install_hint && (
-                    <div className="text-xs text-gray-400 font-mono mt-0.5">{dep.install_hint}</div>
-                  )}
-                </td>
-                <td className="py-2 pr-4">
-                  <DependencyBadge dependency={dep} />
-                </td>
-                <td className="py-2 text-xs text-gray-500 font-mono truncate max-w-[180px]">
-                  {dep.version ?? '—'}
-                </td>
-              </tr>
+          {showAddForm && (
+            <div className="border border-gray-100 rounded p-3 mb-4">
+              <StorageTargetForm
+                onSubmit={(values) => addTarget.mutate(values)}
+                onCancel={() => setShowAddForm(false)}
+                isPending={addTarget.isPending}
+                submitLabel="Add Target"
+              />
+            </div>
+          )}
+
+          {targets.length === 0 && !showAddForm && (
+            <p className="text-sm text-gray-400">No storage targets configured.</p>
+          )}
+
+          <div className="space-y-3">
+            {targets.map((t) => (
+              <StorageTargetCard
+                key={t.id}
+                target={t}
+                isEditing={editingId === t.id}
+                testResult={testResults[t.id]}
+                onEdit={() => setEditingId(t.id)}
+                onCancelEdit={() => setEditingId(null)}
+                onRemove={() => removeTarget.mutate(t.id)}
+                onTest={() => testTarget.mutate(t.id)}
+                onInit={() => initTarget.mutate(t.id)}
+                onSaveEdit={(values) => saveEdit.mutate({ id: t.id, values })}
+                isTestPending={testTarget.isPending}
+                isInitPending={initTarget.isPending}
+                isEditPending={saveEdit.isPending}
+                initResult={initResults[t.id]}
+              />
             ))}
-          </tbody>
-        </table>
+          </div>
+        </div>
+
+        {/* System Health */}
+        <div className="bg-white border border-gray-200 rounded-lg p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-gray-800">System Health</h3>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => recheck.mutate()}
+              disabled={recheck.isPending}
+            >
+              {recheck.isPending ? 'Checking…' : 'Re-check'}
+            </Button>
+          </div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs text-gray-400 uppercase text-left border-b border-gray-100">
+                <th className="pb-2 pr-4">Tool</th>
+                <th className="pb-2 pr-4">Status</th>
+                <th className="pb-2">Version</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {deps.map((dep) => (
+                <tr key={dep.name}>
+                  <td className="py-2 pr-4">
+                    <div className="font-mono text-xs">{dep.name}</div>
+                    {dep.status !== 'found' && dep.install_hint && (
+                      <div className="text-xs text-gray-400 font-mono mt-0.5">
+                        {dep.install_hint}
+                      </div>
+                    )}
+                  </td>
+                  <td className="py-2 pr-4">
+                    <DependencyBadge dependency={dep} />
+                  </td>
+                  <td className="py-2 text-xs text-gray-500 font-mono truncate max-w-[180px]">
+                    {dep.version ?? '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )
