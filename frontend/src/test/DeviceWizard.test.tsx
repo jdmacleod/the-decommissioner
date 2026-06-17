@@ -62,9 +62,16 @@ vi.mock('../stages/RecycleStage', () => ({
 import { getDevice, getDupStats, triggerJob } from '../lib/api'
 
 const makeDevice = (overrides = {}) => ({
-  id: 1, name: 'Test MBP', device_type: 'mac' as const, stage: 'registered' as const,
-  source_path: '/Users/test', serial_number: null, notes: null,
-  storage_type: 'unknown' as const, created_at: '', updated_at: '',
+  id: 1,
+  name: 'Test MBP',
+  device_type: 'mac' as const,
+  stage: 'registered' as const,
+  source_path: '/Users/test',
+  serial_number: null,
+  notes: null,
+  storage_type: 'unknown' as const,
+  created_at: '',
+  updated_at: '',
   ...overrides,
 })
 
@@ -189,9 +196,7 @@ describe('DeviceWizard', () => {
   })
 
   it('shows photo thumbnail when device has photo_path', async () => {
-    vi.mocked(getDevice).mockResolvedValue(
-      makeDevice({ photo_path: '/data/photos/device_1.jpg' })
-    )
+    vi.mocked(getDevice).mockResolvedValue(makeDevice({ photo_path: '/data/photos/device_1.jpg' }))
     renderWithProviders(<DeviceWizard />, { initialPath: '/devices/1', routePath: '/devices/:id' })
     await waitFor(() => screen.getByText('Test MBP'))
     const img = screen.getByRole('img', { name: 'Test MBP' })

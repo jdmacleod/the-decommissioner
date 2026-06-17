@@ -60,10 +60,7 @@ export function RecycleStage({ device, deviceId }: RecycleStageProps) {
         <div className="text-sm font-medium text-gray-700 mb-2">Recycling options:</div>
         <div className="space-y-2">
           {RECYCLING_OPTIONS.map((opt) => (
-            <div
-              key={opt.label}
-              className="border border-gray-100 rounded px-3 py-2 text-sm"
-            >
+            <div key={opt.label} className="border border-gray-100 rounded px-3 py-2 text-sm">
               <div className="flex items-center justify-between">
                 <span className="font-medium text-gray-800">{opt.label}</span>
                 {opt.url && (

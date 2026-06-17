@@ -20,8 +20,7 @@ export function MigrateStage({ device, deviceId }: MigrateStageProps) {
   })
 
   const migrateMutation = useMutation({
-    mutationFn: () =>
-      triggerJob(deviceId, 'migrate', selectedTargetId ?? (targets[0]?.id ?? null)),
+    mutationFn: () => triggerJob(deviceId, 'migrate', selectedTargetId ?? targets[0]?.id ?? null),
     onSuccess: (res) => {
       setActiveJobId(res.job_id)
       queryClient.invalidateQueries({ queryKey: ['device', deviceId] })

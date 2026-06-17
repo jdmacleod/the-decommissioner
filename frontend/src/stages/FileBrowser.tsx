@@ -13,9 +13,9 @@ import type { FileEntry, FileStatus } from '../types/api'
 import { formatBytes } from '../lib/utils'
 
 const STATUS_OPTIONS: { value: FileStatus; label: string; color: string }[] = [
-  { value: 'pending',  label: 'Pending', color: 'text-gray-500' },
-  { value: 'keep',     label: 'Keep',    color: 'text-green-700' },
-  { value: 'discard',  label: 'Discard', color: 'text-red-600' },
+  { value: 'pending', label: 'Pending', color: 'text-gray-500' },
+  { value: 'keep', label: 'Keep', color: 'text-green-700' },
+  { value: 'discard', label: 'Discard', color: 'text-red-600' },
 ]
 
 const PAGE_SIZE = 500
@@ -50,19 +50,19 @@ export function FileBrowser() {
   const queryKey = ['file-entries', deviceId, page, statusFilter, debouncedSearch]
   const { data, isFetching } = useQuery({
     queryKey,
-    queryFn: () => getFileEntries({
-      device_id: deviceId,
-      page,
-      limit: PAGE_SIZE,
-      status: statusFilter || undefined,
-      search: debouncedSearch || undefined,
-    }),
+    queryFn: () =>
+      getFileEntries({
+        device_id: deviceId,
+        page,
+        limit: PAGE_SIZE,
+        status: statusFilter || undefined,
+        search: debouncedSearch || undefined,
+      }),
     placeholderData: (prev) => prev,
   })
 
   const flushMutation = useMutation({
-    mutationFn: (updates: { id: number; status: FileStatus }[]) =>
-      bulkUpdateFileStatus(updates),
+    mutationFn: (updates: { id: number; status: FileStatus }[]) => bulkUpdateFileStatus(updates),
     onSuccess: () => {
       pendingUpdates.current.clear()
       setLocalStatuses(new Map())
@@ -72,61 +72,74 @@ export function FileBrowser() {
 
   const flushUpdates = useCallback(() => {
     if (pendingUpdates.current.size === 0) return
-    const updates = Array.from(pendingUpdates.current.entries()).map(([id, status]) => ({ id, status }))
+    const updates = Array.from(pendingUpdates.current.entries()).map(([id, status]) => ({
+      id,
+      status,
+    }))
     flushMutation.mutate(updates)
   }, [flushMutation])
 
   // Flush on unmount
-  useEffect(() => () => { flushUpdates() }, [flushUpdates])
+  useEffect(
+    () => () => {
+      flushUpdates()
+    },
+    [flushUpdates]
+  )
 
   function setRowStatus(fileId: number, status: FileStatus) {
     pendingUpdates.current.set(fileId, status)
     setLocalStatuses((prev) => new Map(prev).set(fileId, status))
   }
 
-  const columns = useMemo(() => [
-    col.accessor('status', {
-      header: 'Status',
-      size: 110,
-      cell: ({ row }) => {
-        const effectiveStatus = localStatuses.get(row.original.id) ?? row.original.status
-        return (
-          <select
-            value={effectiveStatus}
-            onChange={(e) => setRowStatus(row.original.id, e.target.value as FileStatus)}
-            className={`text-xs border-0 bg-transparent cursor-pointer font-medium ${
-              STATUS_OPTIONS.find((s) => s.value === effectiveStatus)?.color ?? ''
-            }`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s.value} value={s.value}>{s.label}</option>
-            ))}
-          </select>
-        )
-      },
-    }),
-    col.accessor('relative_path', {
-      header: 'Path',
-      size: 600,
-      cell: ({ getValue }) => (
-        <span className="font-mono text-xs text-gray-700 truncate block">{getValue()}</span>
-      ),
-    }),
-    col.accessor('size_bytes', {
-      header: 'Size',
-      size: 90,
-      cell: ({ getValue }) => (
-        <span className="text-xs text-gray-500">{formatBytes(getValue())}</span>
-      ),
-    }),
-    col.accessor('duplicate_group_id', {
-      header: 'Dup',
-      size: 40,
-      cell: ({ getValue }) =>
-        getValue() ? <span className="text-xs text-yellow-600">●</span> : null,
-    }),
-  ], [localStatuses])
+  const columns = useMemo(
+    () => [
+      col.accessor('status', {
+        header: 'Status',
+        size: 110,
+        cell: ({ row }) => {
+          const effectiveStatus = localStatuses.get(row.original.id) ?? row.original.status
+          return (
+            <select
+              value={effectiveStatus}
+              onChange={(e) => setRowStatus(row.original.id, e.target.value as FileStatus)}
+              className={`text-xs border-0 bg-transparent cursor-pointer font-medium ${
+                STATUS_OPTIONS.find((s) => s.value === effectiveStatus)?.color ?? ''
+              }`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {STATUS_OPTIONS.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          )
+        },
+      }),
+      col.accessor('relative_path', {
+        header: 'Path',
+        size: 600,
+        cell: ({ getValue }) => (
+          <span className="font-mono text-xs text-gray-700 truncate block">{getValue()}</span>
+        ),
+      }),
+      col.accessor('size_bytes', {
+        header: 'Size',
+        size: 90,
+        cell: ({ getValue }) => (
+          <span className="text-xs text-gray-500">{formatBytes(getValue())}</span>
+        ),
+      }),
+      col.accessor('duplicate_group_id', {
+        header: 'Dup',
+        size: 40,
+        cell: ({ getValue }) =>
+          getValue() ? <span className="text-xs text-yellow-600">●</span> : null,
+      }),
+    ],
+    [localStatuses]
+  )
 
   const items = data?.items ?? []
 
@@ -156,14 +169,10 @@ export function FileBrowser() {
         </Link>
         <span className="text-gray-300">/</span>
         <span className="text-sm font-medium text-gray-900">File Browser</span>
-        <span className="text-xs text-gray-400 ml-1">
-          {total.toLocaleString()} files
-        </span>
+        <span className="text-xs text-gray-400 ml-1">{total.toLocaleString()} files</span>
         <div className="ml-auto flex items-center gap-2">
           {pendingUpdates.current.size > 0 && (
-            <span className="text-xs text-orange-600">
-              {pendingUpdates.current.size} unsaved
-            </span>
+            <span className="text-xs text-orange-600">{pendingUpdates.current.size} unsaved</span>
           )}
           <button
             onClick={flushUpdates}
@@ -173,7 +182,10 @@ export function FileBrowser() {
             Save
           </button>
           <button
-            onClick={() => { flushUpdates(); navigate(`/devices/${deviceId}/duplicates`) }}
+            onClick={() => {
+              flushUpdates()
+              navigate(`/devices/${deviceId}/duplicates`)
+            }}
             className="text-xs bg-gray-800 text-white px-3 py-1.5 rounded hover:bg-gray-900"
           >
             Go to Duplicates →
@@ -185,18 +197,26 @@ export function FileBrowser() {
       <div className="bg-white border-b border-gray-100 px-6 py-2 flex items-center gap-3">
         <input
           value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(0) }}
+          onChange={(e) => {
+            setSearch(e.target.value)
+            setPage(0)
+          }}
           placeholder="Search paths…"
           className="border border-gray-300 rounded px-2 py-1 text-xs w-64"
         />
         <select
           value={statusFilter}
-          onChange={(e) => { setStatusFilter(e.target.value as FileStatus | ''); setPage(0) }}
+          onChange={(e) => {
+            setStatusFilter(e.target.value as FileStatus | '')
+            setPage(0)
+          }}
           className="border border-gray-300 rounded px-2 py-1 text-xs"
         >
           <option value="">All statuses</option>
           {STATUS_OPTIONS.map((s) => (
-            <option key={s.value} value={s.value}>{s.label}</option>
+            <option key={s.value} value={s.value}>
+              {s.label}
+            </option>
           ))}
         </select>
         <button
@@ -276,7 +296,9 @@ export function FileBrowser() {
           >
             ← Prev
           </button>
-          <span>Page {page + 1} of {totalPages}</span>
+          <span>
+            Page {page + 1} of {totalPages}
+          </span>
           <button
             onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
             disabled={page >= totalPages - 1}
@@ -285,7 +307,8 @@ export function FileBrowser() {
             Next →
           </button>
           <span className="ml-auto text-gray-400">
-            Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} of {total.toLocaleString()}
+            Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} of{' '}
+            {total.toLocaleString()}
           </span>
         </div>
       )}

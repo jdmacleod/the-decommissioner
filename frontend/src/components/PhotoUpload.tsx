@@ -85,7 +85,10 @@ export function PhotoUpload({ value, existingUrl, onChange, onDelete }: PhotoUpl
             {value && (
               <button
                 type="button"
-                onClick={() => { setError(null); onChange(null) }}
+                onClick={() => {
+                  setError(null)
+                  onChange(null)
+                }}
                 className="text-sm text-gray-500 hover:underline text-left"
               >
                 Clear selection
@@ -97,7 +100,10 @@ export function PhotoUpload({ value, existingUrl, onChange, onDelete }: PhotoUpl
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
+          onDragOver={(e) => {
+            e.preventDefault()
+            setDragging(true)
+          }}
           onDragLeave={() => setDragging(false)}
           onDrop={handleDrop}
           className={`w-full border-2 border-dashed rounded-lg px-4 py-6 text-center transition-colors

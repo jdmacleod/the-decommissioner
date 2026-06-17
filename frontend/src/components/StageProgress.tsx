@@ -32,8 +32,8 @@ export function StageProgress({ stage }: StageProgressProps) {
                 isDone
                   ? 'bg-green-600 text-white'
                   : isActive
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-500'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-500'
               }`}
             >
               {s.label}

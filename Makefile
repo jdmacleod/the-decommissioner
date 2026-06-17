@@ -1,4 +1,4 @@
-.PHONY: dev-backend dev-frontend build install-deps pre-commit-install test lint check docker-up
+.PHONY: dev-backend dev-frontend build install-deps pre-commit-install test lint format check docker-up
 
 BACKEND_DIR = backend
 FRONTEND_DIR = frontend
@@ -46,6 +46,9 @@ lint:
 	cd $(BACKEND_DIR) && ruff check app/ tests/
 	cd $(FRONTEND_DIR) && npm run lint
 
+format:
+	cd $(FRONTEND_DIR) && npm run format
+
 # ── check: all quality gates must pass before merging ────────────────────────
 check:
 	@echo "==> Backend: ruff format check"
@@ -56,6 +59,8 @@ check:
 	cd $(BACKEND_DIR) && .venv/bin/mypy app/
 	@echo "==> Backend: pytest (90%+ coverage)"
 	cd $(BACKEND_DIR) && .venv/bin/pytest
+	@echo "==> Frontend: Prettier"
+	cd $(FRONTEND_DIR) && npm run format:check
 	@echo "==> Frontend: ESLint"
 	cd $(FRONTEND_DIR) && npm run lint
 	@echo "==> Frontend: TypeScript"

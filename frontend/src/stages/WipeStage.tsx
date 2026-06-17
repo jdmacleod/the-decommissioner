@@ -1,6 +1,13 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getDeviceJobs, triggerJob, updateChecklist, markWiped, detectStorageType, updateDevice } from '../lib/api'
+import {
+  getDeviceJobs,
+  triggerJob,
+  updateChecklist,
+  markWiped,
+  detectStorageType,
+  updateDevice,
+} from '../lib/api'
 import { JobLog } from '../components/JobLog'
 import type { Device, StorageType, WipeJobMetadata } from '../types/api'
 
@@ -88,9 +95,10 @@ export function WipeStage({ device, deviceId }: WipeStageProps) {
   const isChecklistDevice = isApple(device) || isUsb(device) || device.storage_type === 'ssd'
 
   if (device.stage === 'wiping' && isChecklistDevice) {
-    const title = isApple(device) || isUsb(device)
-      ? 'Step 5 — Prepare for Recycling'
-      : 'Step 5 — Secure Erase (SSD)'
+    const title =
+      isApple(device) || isUsb(device)
+        ? 'Step 5 — Prepare for Recycling'
+        : 'Step 5 — Secure Erase (SSD)'
 
     if (checklist.length === 0) {
       return (
@@ -109,17 +117,12 @@ export function WipeStage({ device, deviceId }: WipeStageProps) {
         </p>
         <div className="space-y-2 mb-5">
           {checklist.map((item, i) => (
-            <label
-              key={i}
-              className="flex items-start gap-3 text-sm text-gray-700 cursor-pointer"
-            >
+            <label key={i} className="flex items-start gap-3 text-sm text-gray-700 cursor-pointer">
               <input
                 type="checkbox"
                 checked={item.done}
                 disabled={checklistMutation.isPending}
-                onChange={(e) =>
-                  checklistMutation.mutate({ index: i, done: e.target.checked })
-                }
+                onChange={(e) => checklistMutation.mutate({ index: i, done: e.target.checked })}
                 className="mt-0.5 h-4 w-4 rounded border-gray-300"
               />
               <span className={item.done ? 'line-through text-gray-400' : ''}>{item.label}</span>
@@ -142,16 +145,16 @@ export function WipeStage({ device, deviceId }: WipeStageProps) {
     return (
       <>
         <h3 className="font-semibold text-gray-800 mb-3">Step 5 — Wiping Drive…</h3>
-        <div className="text-sm text-blue-600 mb-3">Wipe in progress — do not disconnect the drive.</div>
+        <div className="text-sm text-blue-600 mb-3">
+          Wipe in progress — do not disconnect the drive.
+        </div>
         {wipeMetadata.block_device && (
           <div className="text-xs text-gray-500 font-mono mb-2">
             Block device: {wipeMetadata.block_device}
           </div>
         )}
         {wipeMetadata.method && (
-          <div className="text-xs text-gray-500 mb-3">
-            Method: {wipeMetadata.method}
-          </div>
+          <div className="text-xs text-gray-500 mb-3">Method: {wipeMetadata.method}</div>
         )}
         {effectiveJobId && <JobLog jobId={effectiveJobId} />}
       </>
@@ -185,13 +188,11 @@ export function WipeStage({ device, deviceId }: WipeStageProps) {
       <>
         <h3 className="font-semibold text-gray-800 mb-3">Step 5 — Erase USB Drive</h3>
         <div className="text-sm text-blue-800 bg-blue-50 border border-blue-200 rounded px-3 py-2 mb-4">
-          USB flash drives use NAND flash storage and do not support multi-pass overwrite.
-          A guided reformat checklist will be used instead.
+          USB flash drives use NAND flash storage and do not support multi-pass overwrite. A guided
+          reformat checklist will be used instead.
         </div>
         {device.source_path && (
-          <div className="text-xs text-gray-500 font-mono mb-3">
-            Source: {device.source_path}
-          </div>
+          <div className="text-xs text-gray-500 font-mono mb-3">Source: {device.source_path}</div>
         )}
         <label className="flex items-center gap-2 text-sm text-gray-700 mb-4 cursor-pointer">
           <input
@@ -223,14 +224,11 @@ export function WipeStage({ device, deviceId }: WipeStageProps) {
         <>
           <h3 className="font-semibold text-gray-800 mb-3">Step 5 — Wipe Drive</h3>
           <div className="text-sm text-yellow-800 bg-yellow-50 border border-yellow-200 rounded px-3 py-2 mb-4">
-            &#9888; Storage type unknown — the wipe method depends on whether this drive is an
-            HDD (overwrite) or SSD (cryptographic erase). Detect or select the type before
-            proceeding.
+            &#9888; Storage type unknown — the wipe method depends on whether this drive is an HDD
+            (overwrite) or SSD (cryptographic erase). Detect or select the type before proceeding.
           </div>
           {device.source_path && (
-            <div className="text-xs text-gray-500 font-mono mb-3">
-              Source: {device.source_path}
-            </div>
+            <div className="text-xs text-gray-500 font-mono mb-3">Source: {device.source_path}</div>
           )}
           <div className="flex items-center gap-3 mb-4">
             <button
@@ -271,16 +269,16 @@ export function WipeStage({ device, deviceId }: WipeStageProps) {
         <>
           <h3 className="font-semibold text-gray-800 mb-3">Step 5 — Secure Erase (SSD)</h3>
           <div className="text-sm text-blue-800 bg-blue-50 border border-blue-200 rounded px-3 py-2 mb-4">
-            Multi-pass overwrite is ineffective on SSDs. A guided cryptographic erase checklist
-            will be used instead.
+            Multi-pass overwrite is ineffective on SSDs. A guided cryptographic erase checklist will
+            be used instead.
           </div>
           {device.source_path && (
-            <div className="text-xs text-gray-500 font-mono mb-2">
-              Source: {device.source_path}
-            </div>
+            <div className="text-xs text-gray-500 font-mono mb-2">Source: {device.source_path}</div>
           )}
           <div className="text-xs text-gray-500 mb-4 flex items-center gap-2">
-            <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-medium">SSD detected</span>
+            <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-medium">
+              SSD detected
+            </span>
             <button
               onClick={() => setStorageTypeMutation.mutate('hdd')}
               className="underline text-gray-400 hover:text-gray-600"
@@ -313,16 +311,16 @@ export function WipeStage({ device, deviceId }: WipeStageProps) {
       <>
         <h3 className="font-semibold text-gray-800 mb-3">Step 5 — Wipe Drive</h3>
         <div className="text-sm text-yellow-800 bg-yellow-50 border border-yellow-200 rounded px-3 py-2 mb-4">
-          &#9888; This is irreversible. The drive will be overwritten.
-          Verify your migration is complete before proceeding.
+          &#9888; This is irreversible. The drive will be overwritten. Verify your migration is
+          complete before proceeding.
         </div>
         {device.source_path && (
-          <div className="text-xs text-gray-500 font-mono mb-2">
-            Source: {device.source_path}
-          </div>
+          <div className="text-xs text-gray-500 font-mono mb-2">Source: {device.source_path}</div>
         )}
         <div className="text-xs text-gray-500 mb-4 flex items-center gap-2">
-          <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-medium">HDD detected</span>
+          <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-medium">
+            HDD detected
+          </span>
           <button
             onClick={() => setStorageTypeMutation.mutate('ssd')}
             className="underline text-gray-400 hover:text-gray-600"

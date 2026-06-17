@@ -29,9 +29,16 @@ const TYPE_ICON: Record<string, string> = {
 }
 
 const POST_CATALOG: DeviceStage[] = [
-  'cataloged', 'analyzing', 'analyzed',
-  'migrating', 'migrated', 'verifying', 'verified',
-  'wiping', 'wiped', 'recycled',
+  'cataloged',
+  'analyzing',
+  'analyzed',
+  'migrating',
+  'migrated',
+  'verifying',
+  'verified',
+  'wiping',
+  'wiped',
+  'recycled',
 ]
 
 function nextAction(device: Device): { label: string; href: string } | null {
@@ -72,9 +79,7 @@ function DeviceCardStats({ device }: { device: Device }) {
 
   return (
     <div className="mt-2 text-xs text-gray-400 space-y-0.5">
-      {fileCountPage && (
-        <div>{fileCountPage.total.toLocaleString()} files</div>
-      )}
+      {fileCountPage && <div>{fileCountPage.total.toLocaleString()} files</div>}
       {dupStats && dupStats.total > 0 && (
         <div>
           {dupStats.total} dup group{dupStats.total !== 1 ? 's' : ''}

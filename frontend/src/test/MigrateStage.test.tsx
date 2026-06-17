@@ -11,9 +11,7 @@ vi.mock('../lib/api', () => ({
 }))
 
 vi.mock('../components/JobLog', () => ({
-  JobLog: ({ jobId }: { jobId: number }) => (
-    <div data-testid={`job-log-${jobId}`}>JobLog</div>
-  ),
+  JobLog: ({ jobId }: { jobId: number }) => <div data-testid={`job-log-${jobId}`}>JobLog</div>,
 }))
 
 import { getStorageTargets, triggerJob } from '../lib/api'
@@ -78,9 +76,7 @@ describe('MigrateStage', () => {
     render(makeDevice())
     await waitFor(() => screen.getByRole('button', { name: /start migration/i }))
     await userEvent.click(screen.getByRole('button', { name: /start migration/i }))
-    await waitFor(() =>
-      expect(triggerJob).toHaveBeenCalledWith(1, 'migrate', expect.anything())
-    )
+    await waitFor(() => expect(triggerJob).toHaveBeenCalledWith(1, 'migrate', expect.anything()))
   })
 
   it('shows JobLog after job starts', async () => {

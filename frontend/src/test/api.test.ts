@@ -1,21 +1,37 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
-  getDevices, getDevice, createDevice, updateDevice, deleteDevice,
-  getJob, triggerJob, cancelJob,
-  getFileEntries, bulkUpdateFileStatus,
-  getDuplicateGroups, resolveGroup, autoResolveGroups, getDupStats,
-  getDependencies, recheckDependencies,
-  getDevicePhotoUrl, uploadDevicePhoto, deleteDevicePhoto,
+  getDevices,
+  getDevice,
+  createDevice,
+  updateDevice,
+  deleteDevice,
+  getJob,
+  triggerJob,
+  cancelJob,
+  getFileEntries,
+  bulkUpdateFileStatus,
+  getDuplicateGroups,
+  resolveGroup,
+  autoResolveGroups,
+  getDupStats,
+  getDependencies,
+  recheckDependencies,
+  getDevicePhotoUrl,
+  uploadDevicePhoto,
+  deleteDevicePhoto,
 } from '../lib/api'
 
 function mockFetch(body: unknown, ok = true, status = 200) {
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-    ok,
-    status,
-    statusText: ok ? 'OK' : 'Bad Request',
-    json: () => Promise.resolve(body),
-    text: () => Promise.resolve(JSON.stringify(body)),
-  } as Response))
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue({
+      ok,
+      status,
+      statusText: ok ? 'OK' : 'Bad Request',
+      json: () => Promise.resolve(body),
+      text: () => Promise.resolve(JSON.stringify(body)),
+    } as Response)
+  )
 }
 
 beforeEach(() => {
@@ -53,13 +69,19 @@ describe('devices API', () => {
   it('updateDevice PATCHes /api/devices/:id', async () => {
     mockFetch({ id: 1, name: 'Updated' })
     await updateDevice(1, { name: 'Updated' })
-    expect(fetch).toHaveBeenCalledWith('/api/devices/1', expect.objectContaining({ method: 'PATCH' }))
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/devices/1',
+      expect.objectContaining({ method: 'PATCH' })
+    )
   })
 
   it('deleteDevice calls DELETE on /api/devices/:id', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true } as Response))
     await deleteDevice(1)
-    expect(fetch).toHaveBeenCalledWith('/api/devices/1', expect.objectContaining({ method: 'DELETE' }))
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/devices/1',
+      expect.objectContaining({ method: 'DELETE' })
+    )
   })
 })
 
@@ -74,13 +96,19 @@ describe('jobs API', () => {
     mockFetch({ job_id: 10, status: 'pending' })
     const result = await triggerJob(3, 'catalog')
     expect(result.job_id).toBe(10)
-    expect(fetch).toHaveBeenCalledWith('/api/devices/3/jobs', expect.objectContaining({ method: 'POST' }))
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/devices/3/jobs',
+      expect.objectContaining({ method: 'POST' })
+    )
   })
 
   it('cancelJob POSTs to /api/jobs/:id/cancel', async () => {
     mockFetch({ job_id: 5, status: 'cancellation_requested' })
     await cancelJob(5)
-    expect(fetch).toHaveBeenCalledWith('/api/jobs/5/cancel', expect.objectContaining({ method: 'POST' }))
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/jobs/5/cancel',
+      expect.objectContaining({ method: 'POST' })
+    )
   })
 })
 
@@ -107,7 +135,10 @@ describe('file entries API', () => {
     mockFetch({ updated: 3 })
     const result = await bulkUpdateFileStatus([{ id: 1, status: 'keep' }])
     expect(result.updated).toBe(3)
-    expect(fetch).toHaveBeenCalledWith('/api/file-entries', expect.objectContaining({ method: 'PATCH' }))
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/file-entries',
+      expect.objectContaining({ method: 'PATCH' })
+    )
   })
 })
 
@@ -129,13 +160,19 @@ describe('duplicate groups API', () => {
   it('resolveGroup PATCHes /api/duplicate-groups/:id', async () => {
     mockFetch({ id: 1, resolved: true })
     await resolveGroup(1, 5)
-    expect(fetch).toHaveBeenCalledWith('/api/duplicate-groups/1', expect.objectContaining({ method: 'PATCH' }))
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/duplicate-groups/1',
+      expect.objectContaining({ method: 'PATCH' })
+    )
   })
 
   it('autoResolveGroups POSTs to /api/duplicate-groups/:id/auto-resolve', async () => {
     mockFetch({ resolved: 2, remaining: 0 })
     await autoResolveGroups(3)
-    expect(fetch).toHaveBeenCalledWith('/api/duplicate-groups/3/auto-resolve', expect.objectContaining({ method: 'POST' }))
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/duplicate-groups/3/auto-resolve',
+      expect.objectContaining({ method: 'POST' })
+    )
   })
 
   it('getDupStats calls /api/duplicate-groups/stats/:id', async () => {
@@ -155,7 +192,10 @@ describe('dependencies API', () => {
   it('recheckDependencies POSTs to /api/dependencies/recheck', async () => {
     mockFetch([])
     await recheckDependencies()
-    expect(fetch).toHaveBeenCalledWith('/api/dependencies/recheck', expect.objectContaining({ method: 'POST' }))
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/dependencies/recheck',
+      expect.objectContaining({ method: 'POST' })
+    )
   })
 })
 

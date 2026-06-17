@@ -13,14 +13,33 @@ vi.mock('../lib/api', () => ({
 import { getDevices, getDependencies, getStorageTargets } from '../lib/api'
 
 const mockDep = (name: string, status: 'found' | 'missing') => ({
-  id: 1, name, status, version: null, required_for: '[]', install_hint: `install ${name}`, checked_at: '',
+  id: 1,
+  name,
+  status,
+  version: null,
+  required_for: '[]',
+  install_hint: `install ${name}`,
+  checked_at: '',
 })
 
 import type { DeviceStage, DeviceType } from '../types/api'
 
-const makeDevice = (id: number, name: string, stage: DeviceStage = 'registered', device_type: DeviceType = 'mac') => ({
-  id, name, stage, device_type, source_path: null, serial_number: null, notes: null,
-  storage_type: 'unknown' as const, created_at: '', updated_at: '',
+const makeDevice = (
+  id: number,
+  name: string,
+  stage: DeviceStage = 'registered',
+  device_type: DeviceType = 'mac'
+) => ({
+  id,
+  name,
+  stage,
+  device_type,
+  source_path: null,
+  serial_number: null,
+  notes: null,
+  storage_type: 'unknown' as const,
+  created_at: '',
+  updated_at: '',
 })
 
 beforeEach(() => {
@@ -101,9 +120,7 @@ describe('DeviceSidebar', () => {
   })
 
   it('shows emoji icon when no photo_path', async () => {
-    vi.mocked(getDevices).mockResolvedValue([
-      { ...makeDevice(1, 'My MBP'), photo_path: null },
-    ])
+    vi.mocked(getDevices).mockResolvedValue([{ ...makeDevice(1, 'My MBP'), photo_path: null }])
     renderWithProviders(<DeviceSidebar />)
     await waitFor(() => screen.getByText('My MBP'))
     expect(screen.queryByRole('img')).not.toBeInTheDocument()

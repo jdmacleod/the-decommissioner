@@ -19,7 +19,13 @@ interface StorageTargetFormProps {
   submitLabel: string
 }
 
-function DirBrowser({ currentPath, onSelect }: { currentPath: string; onSelect: (p: string) => void }) {
+function DirBrowser({
+  currentPath,
+  onSelect,
+}: {
+  currentPath: string
+  onSelect: (p: string) => void
+}) {
   const seedPath = currentPath && currentPath !== '' ? currentPath : '/'
   const [browsePath, setBrowsePath] = useState(seedPath)
 
@@ -166,7 +172,13 @@ export function StorageTargetForm({
             value={path}
             onChange={(e) => setPath(e.target.value)}
             required
-            placeholder={backend === 'local' ? '/Volumes/BackupDrive/repo' : backend === 'sftp' ? 'sftp:user@host:/path/repo' : 's3:s3.amazonaws.com/bucket'}
+            placeholder={
+              backend === 'local'
+                ? '/Volumes/BackupDrive/repo'
+                : backend === 'sftp'
+                  ? 'sftp:user@host:/path/repo'
+                  : 's3:s3.amazonaws.com/bucket'
+            }
             className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm font-mono"
           />
           {backend === 'local' && (

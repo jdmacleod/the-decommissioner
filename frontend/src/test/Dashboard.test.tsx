@@ -13,9 +13,17 @@ vi.mock('../lib/api', () => ({
 import { getDevices, getDupStats, getFileEntries } from '../lib/api'
 
 const makeDevice = (overrides = {}) => ({
-  id: 1, name: 'Test MBP', device_type: 'mac' as const, stage: 'registered' as const,
-  source_path: '/Users/test', serial_number: null, notes: null, staging_path: null,
-  storage_type: 'unknown' as const, created_at: '2024-01-01', updated_at: '2024-01-01',
+  id: 1,
+  name: 'Test MBP',
+  device_type: 'mac' as const,
+  stage: 'registered' as const,
+  source_path: '/Users/test',
+  serial_number: null,
+  notes: null,
+  staging_path: null,
+  storage_type: 'unknown' as const,
+  created_at: '2024-01-01',
+  updated_at: '2024-01-01',
   ...overrides,
 })
 

@@ -2,16 +2,16 @@ import type { DuplicateGroup, FileEntryBrief } from '../types/api'
 
 const FOLDER_SCORES: Record<string, number> = {
   Documents: 10,
-  Desktop:   8,
-  Pictures:  7,
-  Movies:    7,
-  Music:     7,
+  Desktop: 8,
+  Pictures: 7,
+  Movies: 7,
+  Music: 7,
   Downloads: 6,
-  home:      5,
-  Users:     5,
-  private:   2,
-  var:       1,
-  tmp:       1,
+  home: 5,
+  Users: 5,
+  private: 2,
+  var: 1,
+  tmp: 1,
 }
 
 export function pathScore(path: string): number {

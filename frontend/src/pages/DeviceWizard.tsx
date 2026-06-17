@@ -1,7 +1,14 @@
 import { useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { getDevice, getDupStats, getDevicePhotoUrl, uploadDevicePhoto, deleteDevicePhoto, deleteDevice } from '../lib/api'
+import {
+  getDevice,
+  getDupStats,
+  getDevicePhotoUrl,
+  uploadDevicePhoto,
+  deleteDevicePhoto,
+  deleteDevice,
+} from '../lib/api'
 import { StageProgress } from '../components/StageProgress'
 import { PhotoUpload } from '../components/PhotoUpload'
 import { CatalogStage } from '../stages/CatalogStage'
@@ -12,21 +19,38 @@ import { RecycleStage } from '../stages/RecycleStage'
 import type { DeviceStage } from '../types/api'
 
 const ANALYZE_ACTIVE: DeviceStage[] = [
-  'cataloged', 'analyzing', 'analyzed',
-  'migrating', 'migrated', 'verifying', 'verified',
-  'wiping', 'wiped', 'recycled',
+  'cataloged',
+  'analyzing',
+  'analyzed',
+  'migrating',
+  'migrated',
+  'verifying',
+  'verified',
+  'wiping',
+  'wiped',
+  'recycled',
 ]
 const ANALYZE_DONE: DeviceStage[] = [
-  'analyzed', 'migrating', 'migrated', 'verifying', 'verified',
-  'wiping', 'wiped', 'recycled',
+  'analyzed',
+  'migrating',
+  'migrated',
+  'verifying',
+  'verified',
+  'wiping',
+  'wiped',
+  'recycled',
 ]
 const MIGRATE_ACTIVE: DeviceStage[] = [
-  'analyzed', 'migrating', 'migrated', 'verifying', 'verified',
-  'wiping', 'wiped', 'recycled',
+  'analyzed',
+  'migrating',
+  'migrated',
+  'verifying',
+  'verified',
+  'wiping',
+  'wiped',
+  'recycled',
 ]
-const VERIFY_ACTIVE: DeviceStage[] = [
-  'verifying', 'verified', 'wiping', 'wiped', 'recycled',
-]
+const VERIFY_ACTIVE: DeviceStage[] = ['verifying', 'verified', 'wiping', 'wiped', 'recycled']
 const WIPE_ACTIVE: DeviceStage[] = ['verified', 'wiping', 'wiped', 'recycled']
 const RECYCLE_ACTIVE: DeviceStage[] = ['wiped', 'recycled']
 
@@ -91,7 +115,9 @@ export function DeviceWizard() {
 
   const placeholder = (step: number, label: string, hint: string) => (
     <>
-      <h3 className="font-semibold text-gray-400">Step {step} — {label}</h3>
+      <h3 className="font-semibold text-gray-400">
+        Step {step} — {label}
+      </h3>
       <div className="text-xs text-gray-400 mt-1">{hint}</div>
     </>
   )
@@ -127,18 +153,18 @@ export function DeviceWizard() {
               className="group relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 hover:border-blue-400 transition-colors"
             >
               {photoUrl ? (
-                <img
-                  src={photoUrl}
-                  alt={device.name}
-                  className="w-full h-full object-cover"
-                />
+                <img src={photoUrl} alt={device.name} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full bg-gray-100 flex items-center justify-center text-3xl">
-                  {device.device_type === 'mac' ? '💻'
-                    : device.device_type === 'linux' ? '🐧'
-                    : device.device_type === 'iphone' ? '📱'
-                    : device.device_type === 'ipad' ? '📱'
-                    : '💾'}
+                  {device.device_type === 'mac'
+                    ? '💻'
+                    : device.device_type === 'linux'
+                      ? '🐧'
+                      : device.device_type === 'iphone'
+                        ? '📱'
+                        : device.device_type === 'ipad'
+                          ? '📱'
+                          : '💾'}
                 </div>
               )}
               <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -179,7 +205,10 @@ export function DeviceWizard() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setConfirmingDelete(false); deleteMutation.reset() }}
+                  onClick={() => {
+                    setConfirmingDelete(false)
+                    deleteMutation.reset()
+                  }}
                   className="text-xs text-gray-500 hover:text-gray-700"
                 >
                   Cancel
@@ -228,9 +257,7 @@ export function DeviceWizard() {
                   to={`/devices/${deviceId}/duplicates`}
                   className="inline-block bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
                 >
-                  {device.stage === 'analyzing'
-                    ? 'Continue Resolving →'
-                    : 'Resolve Duplicates →'}
+                  {device.stage === 'analyzing' ? 'Continue Resolving →' : 'Resolve Duplicates →'}
                 </Link>
               </div>
             )}

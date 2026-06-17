@@ -31,6 +31,13 @@ repos:
         pass_filenames: false
         require_serial: true
 
+      - id: prettier
+        name: prettier (frontend)
+        entry: bash -c 'cd frontend && npm run format:check'
+        language: system
+        files: \.(ts|tsx)$
+        pass_filenames: false
+
       - id: eslint
         name: eslint (frontend)
         entry: bash -c 'cd frontend && npm run lint'

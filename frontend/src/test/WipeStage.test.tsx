@@ -15,12 +15,17 @@ vi.mock('../lib/api', () => ({
 }))
 
 vi.mock('../components/JobLog', () => ({
-  JobLog: ({ jobId }: { jobId: number }) => (
-    <div data-testid={`job-log-${jobId}`}>JobLog</div>
-  ),
+  JobLog: ({ jobId }: { jobId: number }) => <div data-testid={`job-log-${jobId}`}>JobLog</div>,
 }))
 
-import { getDeviceJobs, triggerJob, updateChecklist, markWiped, detectStorageType, updateDevice } from '../lib/api'
+import {
+  getDeviceJobs,
+  triggerJob,
+  updateChecklist,
+  markWiped,
+  detectStorageType,
+  updateDevice,
+} from '../lib/api'
 
 const makeDevice = (overrides: Partial<Device> = {}): Device => ({
   id: 1,
@@ -165,9 +170,7 @@ describe('WipeStage — Apple device', () => {
     await waitFor(() => screen.getByText('Sign out of iCloud'))
     const checkboxes = screen.getAllByRole('checkbox')
     await userEvent.click(checkboxes[0])
-    await waitFor(() =>
-      expect(updateChecklist).toHaveBeenCalledWith(10, 0, true)
-    )
+    await waitFor(() => expect(updateChecklist).toHaveBeenCalledWith(10, 0, true))
   })
 
   it('calls markWiped when Mark as Wiped clicked', async () => {
@@ -186,9 +189,7 @@ describe('WipeStage — Apple device', () => {
   })
 
   it('shows loading message when checklist is empty', async () => {
-    vi.mocked(getDeviceJobs).mockResolvedValue([
-      makeWipeJob({ job_metadata: null }),
-    ])
+    vi.mocked(getDeviceJobs).mockResolvedValue([makeWipeJob({ job_metadata: null })])
     render(makeDevice({ device_type: 'mac', stage: 'wiping' }))
     await waitFor(() => screen.getByText(/loading checklist/i))
   })
@@ -199,12 +200,24 @@ describe('WipeStage — Apple device', () => {
 // network_volume was missing from APPLE_TYPES in WipeStage.tsx
 describe('WipeStage — network_volume device', () => {
   it('shows Begin Checklist button for verified network_volume device', async () => {
-    render(makeDevice({ device_type: 'network_volume', stage: 'verified', source_path: '/Volumes/MyShare' }))
+    render(
+      makeDevice({
+        device_type: 'network_volume',
+        stage: 'verified',
+        source_path: '/Volumes/MyShare',
+      })
+    )
     await waitFor(() => screen.getByRole('button', { name: /begin checklist/i }))
   })
 
   it('does NOT show Start Wipe button for verified network_volume', async () => {
-    render(makeDevice({ device_type: 'network_volume', stage: 'verified', source_path: '/Volumes/MyShare' }))
+    render(
+      makeDevice({
+        device_type: 'network_volume',
+        stage: 'verified',
+        source_path: '/Volumes/MyShare',
+      })
+    )
     await waitFor(() => screen.getByRole('button', { name: /begin checklist/i }))
     expect(screen.queryByRole('button', { name: /start wipe/i })).not.toBeInTheDocument()
   })
@@ -221,7 +234,13 @@ describe('WipeStage — network_volume device', () => {
         }),
       }),
     ])
-    render(makeDevice({ device_type: 'network_volume', stage: 'wiping', source_path: '/Volumes/MyShare' }))
+    render(
+      makeDevice({
+        device_type: 'network_volume',
+        stage: 'wiping',
+        source_path: '/Volumes/MyShare',
+      })
+    )
     await waitFor(() => screen.getByText('Backup complete and verified'))
     expect(screen.getByText('Disconnect the share')).toBeInTheDocument()
     expect(screen.queryByTestId('job-log-10')).not.toBeInTheDocument()
@@ -229,7 +248,13 @@ describe('WipeStage — network_volume device', () => {
 
   it('shows Mark as Wiped button for wiping network_volume', async () => {
     vi.mocked(getDeviceJobs).mockResolvedValue([makeWipeJob()])
-    render(makeDevice({ device_type: 'network_volume', stage: 'wiping', source_path: '/Volumes/MyShare' }))
+    render(
+      makeDevice({
+        device_type: 'network_volume',
+        stage: 'wiping',
+        source_path: '/Volumes/MyShare',
+      })
+    )
     await waitFor(() => screen.getByRole('button', { name: /mark as wiped/i }))
   })
 })

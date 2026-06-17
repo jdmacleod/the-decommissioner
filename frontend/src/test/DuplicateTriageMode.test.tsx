@@ -27,10 +27,7 @@ const mockGroupA = {
   resolved: false,
   auto_resolved: false,
   total_size_bytes: 2000,
-  entries: [
-    makeEntry(1, '/Users/jason/Documents/file.txt'),
-    makeEntry(2, '/tmp/file.txt'),
-  ],
+  entries: [makeEntry(1, '/Users/jason/Documents/file.txt'), makeEntry(2, '/tmp/file.txt')],
 }
 
 const mockGroupB = {
@@ -40,10 +37,7 @@ const mockGroupB = {
   resolved: false,
   auto_resolved: false,
   total_size_bytes: 2000,
-  entries: [
-    makeEntry(3, '/Users/jason/Desktop/photo.jpg'),
-    makeEntry(4, '/tmp/photo.jpg'),
-  ],
+  entries: [makeEntry(3, '/Users/jason/Desktop/photo.jpg'), makeEntry(4, '/tmp/photo.jpg')],
 }
 
 // Tied-score group — low confidence
@@ -54,10 +48,7 @@ const mockGroupTied = {
   resolved: false,
   auto_resolved: false,
   total_size_bytes: 2000,
-  entries: [
-    makeEntry(5, '/tmp/x.txt'),
-    makeEntry(6, '/tmp/y.txt'),
-  ],
+  entries: [makeEntry(5, '/tmp/x.txt'), makeEntry(6, '/tmp/y.txt')],
 }
 
 const defaultProps = {
@@ -138,7 +129,7 @@ describe('DuplicateTriageMode', () => {
 
   it('J navigates forward through multiple groups', async () => {
     renderWithProviders(
-      <DuplicateTriageMode groups={[mockGroupA, mockGroupB]} deviceId={1} onClose={vi.fn()} />,
+      <DuplicateTriageMode groups={[mockGroupA, mockGroupB]} deviceId={1} onClose={vi.fn()} />
     )
     await waitFor(() => screen.getByText('1 / 2'))
     fireEvent.keyDown(document, { key: 'j' })
@@ -147,7 +138,7 @@ describe('DuplicateTriageMode', () => {
 
   it('K navigates backward (stops at 0)', async () => {
     renderWithProviders(
-      <DuplicateTriageMode groups={[mockGroupA, mockGroupB]} deviceId={1} onClose={vi.fn()} />,
+      <DuplicateTriageMode groups={[mockGroupA, mockGroupB]} deviceId={1} onClose={vi.fn()} />
     )
     await waitFor(() => screen.getByText('1 / 2'))
     // K at position 0 should not go below 0
@@ -208,7 +199,7 @@ describe('DuplicateTriageMode', () => {
   it('shows receipt immediately when all groups are already resolved', () => {
     const resolvedGroup = { ...mockGroupA, resolved: true, canonical_entry_id: 1 }
     renderWithProviders(
-      <DuplicateTriageMode groups={[resolvedGroup]} deviceId={1} onClose={vi.fn()} />,
+      <DuplicateTriageMode groups={[resolvedGroup]} deviceId={1} onClose={vi.fn()} />
     )
     expect(screen.getByText(/Done/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /finish/i })).toBeInTheDocument()
@@ -216,7 +207,7 @@ describe('DuplicateTriageMode', () => {
 
   it('receipt shows low-confidence groups', async () => {
     renderWithProviders(
-      <DuplicateTriageMode groups={[mockGroupTied]} deviceId={1} onClose={vi.fn()} />,
+      <DuplicateTriageMode groups={[mockGroupTied]} deviceId={1} onClose={vi.fn()} />
     )
     await waitFor(() => screen.getByText('/tmp/x.txt'))
     // Accept the suggestion — confidence is 0 (tied), so receipt should show it
@@ -232,15 +223,13 @@ describe('DuplicateTriageMode', () => {
     await waitFor(() => screen.getByText('/Users/jason/Documents/file.txt'))
     fireEvent.keyDown(document, { key: ' ' })
     await waitFor(() => expect(screen.getByText(/Done/)).toBeInTheDocument())
-    expect(
-      screen.getByText(/All decisions were high-confidence/i),
-    ).toBeInTheDocument()
+    expect(screen.getByText(/All decisions were high-confidence/i)).toBeInTheDocument()
   })
 
   it('Finish button calls queryClient.invalidateQueries and onClose', async () => {
     const onClose = vi.fn()
     renderWithProviders(
-      <DuplicateTriageMode groups={[mockGroupA]} deviceId={1} onClose={onClose} />,
+      <DuplicateTriageMode groups={[mockGroupA]} deviceId={1} onClose={onClose} />
     )
     await waitFor(() => screen.getByText('/Users/jason/Documents/file.txt'))
     fireEvent.keyDown(document, { key: 'j' }) // skip to receipt

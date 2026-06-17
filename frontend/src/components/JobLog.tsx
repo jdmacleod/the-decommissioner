@@ -18,7 +18,7 @@ export function JobLog({ jobId, className = '', height = '300px' }: JobLogProps)
   useEffect(() => {
     autoScrollRef.current = true
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setShowScrollBtn(false)  // Intentional reset on jobId change
+    setShowScrollBtn(false) // Intentional reset on jobId change
   }, [jobId])
 
   // Auto-scroll unless user has scrolled up

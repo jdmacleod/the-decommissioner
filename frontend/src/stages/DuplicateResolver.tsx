@@ -1,7 +1,13 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getDevice, getDuplicateGroups, getDupStats, resolveGroup, autoResolveGroups } from '../lib/api'
+import {
+  getDevice,
+  getDuplicateGroups,
+  getDupStats,
+  resolveGroup,
+  autoResolveGroups,
+} from '../lib/api'
 import type { DuplicateGroup } from '../types/api'
 import { formatBytes } from '../lib/utils'
 import { DuplicateTriageMode } from './DuplicateTriageMode'
@@ -59,7 +65,7 @@ export function DuplicateResolver() {
   const group: DuplicateGroup | undefined = groups[cursor]
   const wastedBytes = groups.reduce(
     (sum, g) => sum + g.total_size_bytes - (g.entries[0]?.size_bytes ?? 0),
-    0,
+    0
   )
 
   const allResolved = stats && stats.unresolved === 0 && stats.total > 0

@@ -14,16 +14,30 @@ vi.mock('../lib/api', () => ({
 import { createDevice, detectIos, detectVolumes, uploadDevicePhoto } from '../lib/api'
 
 const newDevice = {
-  id: 1, name: 'My Drive', device_type: 'hard_drive' as const, stage: 'registered' as const,
-  source_path: null, serial_number: null, notes: null,
-  storage_type: 'unknown' as const, created_at: '', updated_at: '',
+  id: 1,
+  name: 'My Drive',
+  device_type: 'hard_drive' as const,
+  stage: 'registered' as const,
+  source_path: null,
+  serial_number: null,
+  notes: null,
+  storage_type: 'unknown' as const,
+  created_at: '',
+  updated_at: '',
 }
 
 beforeEach(() => {
   vi.mocked(createDevice).mockResolvedValue(newDevice)
-  vi.mocked(detectIos).mockResolvedValue({ available: true, name: "Jason's iPhone", serial: 'ABC123' })
+  vi.mocked(detectIos).mockResolvedValue({
+    available: true,
+    name: "Jason's iPhone",
+    serial: 'ABC123',
+  })
   vi.mocked(detectVolumes).mockResolvedValue([])
-  vi.mocked(uploadDevicePhoto).mockResolvedValue({ ...newDevice, photo_path: '/data/photos/device_1.jpg' })
+  vi.mocked(uploadDevicePhoto).mockResolvedValue({
+    ...newDevice,
+    photo_path: '/data/photos/device_1.jpg',
+  })
 })
 
 describe('AddDevice form', () => {
@@ -223,7 +237,12 @@ describe('AddDevice form', () => {
 
   it('auto-fills serial number from first volume when scan completes', async () => {
     vi.mocked(detectVolumes).mockResolvedValue([
-      { path: '/Volumes/LEXAR128', label: 'LEXAR128', serial_number: 'AABBCCDD-1234-5678', is_network_mount: false },
+      {
+        path: '/Volumes/LEXAR128',
+        label: 'LEXAR128',
+        serial_number: 'AABBCCDD-1234-5678',
+        is_network_mount: false,
+      },
     ])
     renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
     await userEvent.click(screen.getByRole('button', { name: /scan volumes/i }))
@@ -243,7 +262,9 @@ describe('AddDevice form', () => {
     await waitFor(() => expect(detectVolumes).toHaveBeenCalled())
     // Serial number field should remain empty
     const serialInputs = screen.getAllByRole('textbox') as HTMLInputElement[]
-    const serialInput = serialInputs.find((el) => el.placeholder === '' || el.value !== '/Volumes/LaCie')
+    const serialInput = serialInputs.find(
+      (el) => el.placeholder === '' || el.value !== '/Volumes/LaCie'
+    )
     expect(serialInput?.value ?? '').toBe('')
   })
 

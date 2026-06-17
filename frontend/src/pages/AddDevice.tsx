@@ -184,15 +184,17 @@ export function AddDevice() {
               />
             )}
             {isVolumeBased && volumeScanDone && volumes.length === 0 && (
-              <div className="text-xs text-gray-400 mt-1">No volumes detected. Enter path manually.</div>
+              <div className="text-xs text-gray-400 mt-1">
+                No volumes detected. Enter path manually.
+              </div>
             )}
           </div>
         )}
 
         {isIos && (
           <div className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded px-3 py-2">
-            iOS devices are extracted to a local staging directory automatically. Connect the
-            device and use &ldquo;Detect&rdquo; above to auto-fill fields.
+            iOS devices are extracted to a local staging directory automatically. Connect the device
+            and use &ldquo;Detect&rdquo; above to auto-fill fields.
           </div>
         )}
 
@@ -222,9 +224,7 @@ export function AddDevice() {
           <PhotoUpload value={photo} existingUrl={null} onChange={setPhoto} />
         </div>
 
-        {mutation.error && (
-          <div className="text-red-600 text-sm">{String(mutation.error)}</div>
-        )}
+        {mutation.error && <div className="text-red-600 text-sm">{String(mutation.error)}</div>}
 
         <div className="flex gap-3">
           <button

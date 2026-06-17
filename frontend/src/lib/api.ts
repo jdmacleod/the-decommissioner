@@ -1,8 +1,19 @@
 import type {
-  Device, DeviceCreate, Job, Dependency,
-  FileEntryPage, DuplicateGroup, DupStats, FileStatus,
-  StorageTarget, StorageTargetCreate, Snapshot, IosDetectResult, StorageBackend,
-  VerifyDiff, VolumeEntry,
+  Device,
+  DeviceCreate,
+  Job,
+  Dependency,
+  FileEntryPage,
+  DuplicateGroup,
+  DupStats,
+  FileStatus,
+  StorageTarget,
+  StorageTargetCreate,
+  Snapshot,
+  IosDetectResult,
+  StorageBackend,
+  VerifyDiff,
+  VolumeEntry,
 } from '../types/api'
 
 const BASE = '/api'
@@ -73,7 +84,10 @@ export const bulkUpdateFileStatus = (updates: { id: number; status: FileStatus }
   })
 
 // Duplicate groups
-export const getDuplicateGroups = (deviceId: number, resolved?: boolean): Promise<DuplicateGroup[]> => {
+export const getDuplicateGroups = (
+  deviceId: number,
+  resolved?: boolean
+): Promise<DuplicateGroup[]> => {
   const params = new URLSearchParams({ device_id: String(deviceId) })
   if (resolved !== undefined) params.set('resolved', String(resolved))
   return request(`/duplicate-groups?${params}`)
@@ -109,8 +123,15 @@ export const testStorageTarget = (id: number) =>
 export const initStorageTarget = (id: number) =>
   request<{ ok: boolean; output: string }>(`/storage-targets/${id}/init`, { method: 'POST' })
 
-export interface DirEntry { name: string; path: string }
-export interface DirListing { path: string; parent: string | null; entries: DirEntry[] }
+export interface DirEntry {
+  name: string
+  path: string
+}
+export interface DirListing {
+  path: string
+  parent: string | null
+  entries: DirEntry[]
+}
 export const listDirs = (path: string) =>
   request<DirListing>(`/storage-targets/list-dirs?path=${encodeURIComponent(path)}`)
 
@@ -122,8 +143,7 @@ export const getVerifyDiff = (deviceId: number) =>
   request<VerifyDiff>(`/devices/${deviceId}/verify-diff`)
 
 // Device jobs
-export const getDeviceJobs = (deviceId: number) =>
-  request<Job[]>(`/devices/${deviceId}/jobs`)
+export const getDeviceJobs = (deviceId: number) => request<Job[]>(`/devices/${deviceId}/jobs`)
 
 // Wipe/recycle lifecycle
 export const updateChecklist = (jobId: number, index: number, done: boolean) =>
@@ -162,8 +182,7 @@ export const detectStorageType = (deviceId: number) =>
   request<Device>(`/devices/${deviceId}/detect-storage`, { method: 'POST' })
 
 // Detect mounted volumes (for HDD/USB source path selection)
-export const detectVolumes = () =>
-  request<VolumeEntry[]>('/devices/detect-volumes')
+export const detectVolumes = () => request<VolumeEntry[]>('/devices/detect-volumes')
 
 // Device photos
 export const getDevicePhotoUrl = (deviceId: number) => `${BASE}/devices/${deviceId}/photo`

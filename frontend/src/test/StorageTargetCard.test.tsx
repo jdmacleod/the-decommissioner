@@ -33,9 +33,7 @@ const defaultProps = {
 beforeEach(() => vi.clearAllMocks())
 
 const render = (target: StorageTarget, props = {}) =>
-  renderWithProviders(
-    <StorageTargetCard target={target} {...defaultProps} {...props} />
-  )
+  renderWithProviders(<StorageTargetCard target={target} {...defaultProps} {...props} />)
 
 describe('StorageTargetCard', () => {
   it('shows target name and path', () => {
@@ -112,7 +110,9 @@ describe('StorageTargetCard', () => {
   })
 
   it('shows init failure result with output when initResult.ok is false', async () => {
-    render(makeTarget(), { initResult: { ok: false, output: 'Fatal: create key in repository at /bad: ...' } })
+    render(makeTarget(), {
+      initResult: { ok: false, output: 'Fatal: create key in repository at /bad: ...' },
+    })
     await waitFor(() => screen.getByText(/Init failed/))
     expect(screen.getByText(/Fatal: create key/)).toBeInTheDocument()
   })

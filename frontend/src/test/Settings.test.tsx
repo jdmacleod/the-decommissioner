@@ -17,20 +17,46 @@ vi.mock('../lib/api', () => ({
 }))
 
 import {
-  getDependencies, recheckDependencies,
-  getStorageTargets, createStorageTarget, deleteStorageTarget,
-  testStorageTarget, initStorageTarget, updateStorageTarget,
+  getDependencies,
+  recheckDependencies,
+  getStorageTargets,
+  createStorageTarget,
+  deleteStorageTarget,
+  testStorageTarget,
+  initStorageTarget,
+  updateStorageTarget,
 } from '../lib/api'
 
 const mockDeps = [
-  { id: 1, name: 'restic', status: 'found' as const, version: '0.16.0', required_for: '[]', install_hint: 'brew install restic', checked_at: '' },
-  { id: 2, name: 'czkawka_cli', status: 'missing' as const, version: null, required_for: '[]', install_hint: 'brew install czkawka', checked_at: '' },
+  {
+    id: 1,
+    name: 'restic',
+    status: 'found' as const,
+    version: '0.16.0',
+    required_for: '[]',
+    install_hint: 'brew install restic',
+    checked_at: '',
+  },
+  {
+    id: 2,
+    name: 'czkawka_cli',
+    status: 'missing' as const,
+    version: null,
+    required_for: '[]',
+    install_hint: 'brew install czkawka',
+    checked_at: '',
+  },
 ]
 
 const makeTarget = (overrides: Partial<StorageTarget> = {}): StorageTarget => ({
-  id: 1, name: 'My Repo', backend: 'local', path: '/Volumes/repo',
-  restic_password_env: 'RESTIC_PASSWORD', is_default: true,
-  initialized: false, created_at: '',
+  id: 1,
+  name: 'My Repo',
+  backend: 'local',
+  path: '/Volumes/repo',
+  restic_password_env: 'RESTIC_PASSWORD',
+  is_default: true,
+  initialized: false,
+  created_at: '',
   ...overrides,
 })
 
@@ -206,7 +232,10 @@ describe('Settings page', () => {
 
   it('shows init success result after Init click', async () => {
     vi.mocked(getStorageTargets).mockResolvedValue([makeTarget({ initialized: false })])
-    vi.mocked(initStorageTarget).mockResolvedValue({ ok: true, output: 'created restic repository' })
+    vi.mocked(initStorageTarget).mockResolvedValue({
+      ok: true,
+      output: 'created restic repository',
+    })
     renderWithProviders(<Settings />)
     await waitFor(() => screen.getByRole('button', { name: /init/i }))
     await userEvent.click(screen.getByRole('button', { name: /init/i }))

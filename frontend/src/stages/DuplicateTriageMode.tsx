@@ -23,7 +23,7 @@ export function DuplicateTriageMode({ groups, deviceId, onClose }: Props) {
   const [cursor, setCursor] = useState(0)
   const [decisions, setDecisions] = useState<Map<number, number>>(() => new Map())
   const [phase, setPhase] = useState<'triage' | 'receipt'>(() =>
-    groups.filter((g) => !g.resolved).length === 0 ? 'receipt' : 'triage',
+    groups.filter((g) => !g.resolved).length === 0 ? 'receipt' : 'triage'
   )
   const [toast, setToast] = useState<ToastState | null>(null)
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -174,8 +174,7 @@ export function DuplicateTriageMode({ groups, deviceId, onClose }: Props) {
             <kbd className="bg-gray-800 px-1.5 py-0.5 rounded text-gray-300">K</kbd> Prev
           </span>
           <span>
-            <kbd className="bg-gray-800 px-1.5 py-0.5 rounded text-gray-300">1–9</kbd> Pick by
-            index
+            <kbd className="bg-gray-800 px-1.5 py-0.5 rounded text-gray-300">1–9</kbd> Pick by index
           </span>
         </div>
       )}
@@ -215,7 +214,9 @@ function TriageCard({ group, onPick }: TriageCardProps) {
     <div className="max-w-2xl mx-auto px-6 py-8">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <span className="text-xs font-mono text-gray-500">{group.content_hash.slice(0, 12)}…</span>
+          <span className="text-xs font-mono text-gray-500">
+            {group.content_hash.slice(0, 12)}…
+          </span>
           <span className="text-xs text-gray-500">{formatBytes(group.total_size_bytes)} total</span>
         </div>
         {conf <= LOW_CONFIDENCE_THRESHOLD && (
@@ -239,7 +240,9 @@ function TriageCard({ group, onPick }: TriageCardProps) {
               }`}
             >
               <div className="flex items-start gap-3">
-                <span className="text-xs text-gray-500 mt-0.5 shrink-0 font-mono w-4">{idx + 1}</span>
+                <span className="text-xs text-gray-500 mt-0.5 shrink-0 font-mono w-4">
+                  {idx + 1}
+                </span>
                 <div className="flex-1 min-w-0">
                   <div className="font-mono text-xs text-gray-200 break-all">{entry.path}</div>
                   <div className="flex gap-3 mt-1 text-xs text-gray-500">
@@ -299,7 +302,10 @@ function ReceiptScreen({
           {lowConfidenceGroups.map((group) => {
             const chosenId = decisions.get(group.id)
             return (
-              <div key={group.id} className="border border-gray-700 rounded-lg px-4 py-3 bg-gray-900">
+              <div
+                key={group.id}
+                className="border border-gray-700 rounded-lg px-4 py-3 bg-gray-900"
+              >
                 <div className="text-xs text-gray-500 font-mono mb-2">
                   {group.content_hash.slice(0, 12)}… · {formatBytes(group.total_size_bytes)}
                 </div>

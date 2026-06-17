@@ -10,14 +10,7 @@ const makeFile = (name: string, type: string, sizeBytes: number): File => {
 }
 
 const render = (props: Partial<Parameters<typeof PhotoUpload>[0]> = {}) =>
-  renderWithProviders(
-    <PhotoUpload
-      value={null}
-      existingUrl={null}
-      onChange={vi.fn()}
-      {...props}
-    />
-  )
+  renderWithProviders(<PhotoUpload value={null} existingUrl={null} onChange={vi.fn()} {...props} />)
 
 describe('PhotoUpload', () => {
   it('renders upload area when no photo', () => {

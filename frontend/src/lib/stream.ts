@@ -22,7 +22,7 @@ export function useJobStream(jobId: number | null): JobStreamState {
     if (jobId === null) return
 
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLines([])    // Intentional reset when jobId changes
+    setLines([]) // Intentional reset when jobId changes
     setDone(false)
     setError(false)
 

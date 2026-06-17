@@ -67,7 +67,7 @@ describe('confidence', () => {
   it('returns high delta for clear winner', () => {
     const group = makeGroup([
       '/Users/jason/Documents/report.pdf', // score 10
-      '/tmp/report.pdf',                   // score 1
+      '/tmp/report.pdf', // score 1
     ])
     expect(confidence(group)).toBe(9)
   })
@@ -75,7 +75,7 @@ describe('confidence', () => {
   it('returns low delta for close paths', () => {
     const group = makeGroup([
       '/Users/jason/Documents/file.txt', // 10
-      '/Users/jason/Desktop/file.txt',   // 8
+      '/Users/jason/Desktop/file.txt', // 8
     ])
     expect(confidence(group)).toBe(2)
   })
@@ -104,7 +104,7 @@ describe('suggestedKeeper', () => {
   it('uses mtime as tie-break when scores are equal', () => {
     const group = makeGroup(
       ['/tmp/a.txt', '/tmp/b.txt'],
-      ['2020-01-01T00:00:00Z', '2023-06-15T12:00:00Z'],
+      ['2020-01-01T00:00:00Z', '2023-06-15T12:00:00Z']
     )
     // both score 1; newer mtime wins
     expect(suggestedKeeper(group).id).toBe(2)
@@ -113,7 +113,7 @@ describe('suggestedKeeper', () => {
   it('handles equal score and equal mtime by returning whichever comes first via reduce', () => {
     const group = makeGroup(
       ['/tmp/a.txt', '/tmp/b.txt'],
-      ['2020-01-01T00:00:00Z', '2020-01-01T00:00:00Z'],
+      ['2020-01-01T00:00:00Z', '2020-01-01T00:00:00Z']
     )
     // identical score and mtime — reduce keeps first (id=1)
     expect(suggestedKeeper(group).id).toBe(1)

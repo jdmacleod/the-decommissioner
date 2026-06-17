@@ -13,9 +13,7 @@ vi.mock('../lib/api', () => ({
 }))
 
 vi.mock('../components/JobLog', () => ({
-  JobLog: ({ jobId }: { jobId: number }) => (
-    <div data-testid={`job-log-${jobId}`}>JobLog</div>
-  ),
+  JobLog: ({ jobId }: { jobId: number }) => <div data-testid={`job-log-${jobId}`}>JobLog</div>,
 }))
 
 import { getDependencies, getFileEntries, triggerJob, clearStaging } from '../lib/api'
@@ -45,8 +43,13 @@ const makeDupStats = (overrides: Partial<DupStats> = {}): DupStats => ({
 beforeEach(() => {
   vi.mocked(getDependencies).mockResolvedValue([
     {
-      id: 1, name: 'czkawka_cli', status: 'found', version: '6.0.0',
-      required_for: '[]', install_hint: '', checked_at: '',
+      id: 1,
+      name: 'czkawka_cli',
+      status: 'found',
+      version: '6.0.0',
+      required_for: '[]',
+      install_hint: '',
+      checked_at: '',
     },
   ])
   vi.mocked(getFileEntries).mockResolvedValue({ items: [], total: 1204, page: 0, limit: 1 })
@@ -55,10 +58,10 @@ beforeEach(() => {
 })
 
 const render = (device: Device, dupStats?: DupStats) =>
-  renderWithProviders(
-    <CatalogStage device={device} deviceId={device.id} dupStats={dupStats} />,
-    { initialPath: '/devices/1', routePath: '/devices/:id' },
-  )
+  renderWithProviders(<CatalogStage device={device} deviceId={device.id} dupStats={dupStats} />, {
+    initialPath: '/devices/1',
+    routePath: '/devices/:id',
+  })
 
 describe('CatalogStage', () => {
   it('shows Step 1 heading', () => {

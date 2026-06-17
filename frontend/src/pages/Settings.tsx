@@ -1,9 +1,14 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  getDependencies, recheckDependencies,
-  getStorageTargets, createStorageTarget, deleteStorageTarget,
-  testStorageTarget, initStorageTarget, updateStorageTarget,
+  getDependencies,
+  recheckDependencies,
+  getStorageTargets,
+  createStorageTarget,
+  deleteStorageTarget,
+  testStorageTarget,
+  initStorageTarget,
+  updateStorageTarget,
 } from '../lib/api'
 import { StorageTargetCard } from '../components/StorageTargetCard'
 import { StorageTargetForm } from '../components/StorageTargetForm'
@@ -29,8 +34,12 @@ export function Settings() {
 
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
-  const [testResults, setTestResults] = useState<Record<number, { ok: boolean; output: string }>>({})
-  const [initResults, setInitResults] = useState<Record<number, { ok: boolean; output: string }>>({})
+  const [testResults, setTestResults] = useState<Record<number, { ok: boolean; output: string }>>(
+    {}
+  )
+  const [initResults, setInitResults] = useState<Record<number, { ok: boolean; output: string }>>(
+    {}
+  )
 
   const addTarget = useMutation({
     mutationFn: (values: StorageTargetFormValues) => createStorageTarget(values),
