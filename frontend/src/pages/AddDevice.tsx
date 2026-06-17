@@ -104,7 +104,7 @@ export function AddDevice() {
               setVolumes([])
               setVolumeScanDone(false)
             }}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+            className="w-full border border-gray-300 rounded px-3 py-3 text-sm"
           >
             {DEVICE_TYPES.map((t) => (
               <option key={t.value} value={t.value}>
@@ -138,7 +138,7 @@ export function AddDevice() {
             onChange={(e) => setName(e.target.value)}
             required
             placeholder="e.g. Jason's 2019 MBP"
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+            className="w-full border border-gray-300 rounded px-3 py-3 text-sm"
           />
         </div>
 
@@ -166,7 +166,7 @@ export function AddDevice() {
                   if (selected?.serial_number) setSerialNumber(selected.serial_number)
                   if (selected?.is_network_mount) setDeviceType('network_volume')
                 }}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono"
+                className="w-full border border-gray-300 rounded px-3 py-3 text-sm font-mono"
               >
                 {volumes.map((v) => (
                   <option key={v.path} value={v.path}>
@@ -180,7 +180,7 @@ export function AddDevice() {
                 value={sourcePath}
                 onChange={(e) => setSourcePath(e.target.value)}
                 placeholder="/Volumes/MyDrive"
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono"
+                className="w-full border border-gray-300 rounded px-3 py-3 text-sm font-mono"
               />
             )}
             {isVolumeBased && volumeScanDone && volumes.length === 0 && (
@@ -203,7 +203,7 @@ export function AddDevice() {
           <input
             value={serialNumber}
             onChange={(e) => setSerialNumber(e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+            className="w-full border border-gray-300 rounded px-3 py-3 text-sm"
           />
         </div>
 
@@ -213,7 +213,7 @@ export function AddDevice() {
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+            className="w-full border border-gray-300 rounded px-3 py-3 text-sm"
           />
         </div>
 
@@ -230,14 +230,14 @@ export function AddDevice() {
           <button
             type="submit"
             disabled={mutation.isPending}
-            className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 disabled:opacity-50"
+            className="bg-blue-600 text-white px-4 py-3 rounded text-sm hover:bg-blue-700 disabled:opacity-50 min-h-[44px]"
           >
             {mutation.isPending ? 'Creating...' : 'Create Device'}
           </button>
           <button
             type="button"
             onClick={() => navigate('/')}
-            className="border border-gray-300 px-4 py-2 rounded text-sm text-gray-700 hover:bg-gray-50"
+            className="border border-gray-300 px-4 py-3 rounded text-sm text-gray-700 hover:bg-gray-50 min-h-[44px]"
           >
             Cancel
           </button>
