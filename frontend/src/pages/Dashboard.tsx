@@ -50,7 +50,7 @@ export function Dashboard() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6">
           {STAGE_GROUPS.map((group) => {
             const groupDevices = devices.filter((d) => group.stages.includes(d.stage))
             return (
