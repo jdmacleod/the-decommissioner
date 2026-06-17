@@ -1,9 +1,9 @@
 # the-decommissioner — UI Design
 
-**Stack:** React + Vite + TypeScript + Tailwind + shadcn/ui  
-**State:** TanStack Query (server state) + Zustand (local UI state)  
-**Tables:** TanStack Table (virtualized, required for large file manifests)  
-**Streaming:** native `EventSource` API  
+**Stack:** React + Vite + TypeScript + Tailwind + shadcn/ui
+**State:** TanStack Query (server state) + Zustand (local UI state)
+**Tables:** TanStack Table (virtualized, required for large file manifests)
+**Streaming:** native `EventSource` API
 **Routing:** React Router v6
 
 ---
@@ -474,12 +474,12 @@ export function JobLog({ jobId, height = "300px" }: JobLogProps) {
 
   useEffect(() => {
     const es = new EventSource(`/api/jobs/${jobId}/stream`);
-    
+
     es.onmessage = (e) => {
       linesRef.current = [...linesRef.current, e.data];
       setLines([...linesRef.current]);
     };
-    
+
     es.addEventListener("done", () => {
       setDone(true);
       es.close();

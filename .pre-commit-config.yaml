@@ -25,7 +25,7 @@ repos:
       - id: mypy
         name: mypy
         entry: backend/.venv/bin/mypy
-        args: [backend/app/]
+        args: [backend/app/, --config-file, backend/pyproject.toml]
         language: system
         types: [python]
         pass_filenames: false

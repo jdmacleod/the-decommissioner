@@ -346,7 +346,7 @@ async def run_catalog(
     """
     Runs czkawka in JSON output mode, parses results, and bulk-inserts
     FileEntry rows into the database.
-    
+
     Falls back to jdupes if czkawka is not available.
     """
     source_path = device.source_path or device.staging_path

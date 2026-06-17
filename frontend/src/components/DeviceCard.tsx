@@ -129,4 +129,3 @@ export function DeviceCard({ device }: { device: Device }) {
     </div>
   )
 }
-
