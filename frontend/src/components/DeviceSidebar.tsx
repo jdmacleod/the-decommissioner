@@ -22,6 +22,7 @@ function DeviceTypeIcon({ type }: { type: string }) {
     ipad: '📱',
     usb_drive: '💾',
     hard_drive: '🖥',
+    network_volume: '📦',
   }
   return <span className="text-xs">{icons[type] ?? '📦'}</span>
 }
@@ -47,8 +48,6 @@ export function DeviceSidebar() {
     queryFn: getStorageTargets,
     refetchInterval: 60000,
   })
-
-  const missingDeps = deps.filter((d) => d.status === 'missing')
 
   return (
     <aside className="w-56 shrink-0 bg-white border-r border-gray-200 flex flex-col min-h-screen">
@@ -134,27 +133,46 @@ export function DeviceSidebar() {
           </div>
         )}
 
-        {/* Missing deps */}
-        {missingDeps.length > 0 && (
+        {/* Health — all deps */}
+        {deps.length > 0 && (
           <div className="px-4 mb-2">
             <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
-              Missing tools
+              Health
             </div>
-            {missingDeps.map((d) => (
-              <div key={d.name} className="flex items-center gap-1.5 text-xs text-red-600 py-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+            {deps.map((d) => (
+              <div
+                key={d.name}
+                className={`flex items-center gap-1.5 text-xs py-0.5 ${
+                  d.status === 'found' ? 'text-gray-600' : 'text-red-600'
+                }`}
+              >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                    d.status === 'found' ? 'bg-green-500' : 'bg-red-500'
+                  }`}
+                />
                 <span className="font-mono">{d.name}</span>
               </div>
             ))}
           </div>
         )}
 
-        <Link
-          to="/settings"
-          className="flex items-center gap-2 px-4 py-1.5 text-xs text-gray-500 hover:text-gray-700"
-        >
-          ⚙ Settings
-        </Link>
+        <div className="flex items-center justify-between px-4">
+          <Link
+            to="/settings"
+            className="flex items-center gap-1 py-1.5 text-xs text-gray-500 hover:text-gray-700"
+          >
+            ⚙ Settings
+          </Link>
+          <a
+            href="https://github.com/jdmacleod/the-decommissioner"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="py-1.5 text-xs text-gray-500 hover:text-gray-700"
+          >
+            ? Help
+          </a>
+        </div>
         <div className="px-4 pt-1 text-xs text-gray-500 select-none">v{__APP_VERSION__}</div>
       </div>
     </aside>

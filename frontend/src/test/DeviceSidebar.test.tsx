@@ -84,18 +84,18 @@ describe('DeviceSidebar', () => {
     await waitFor(() => expect(screen.getByText(/Settings/i)).toBeInTheDocument())
   })
 
-  it('shows missing dep names in footer', async () => {
+  it('shows dep names in health footer', async () => {
     vi.mocked(getDependencies).mockResolvedValue([mockDep('restic', 'missing')])
     renderWithProviders(<DeviceSidebar />)
     await waitFor(() => expect(screen.getByText('restic')).toBeInTheDocument())
-    expect(screen.getByText('Missing tools')).toBeInTheDocument()
+    expect(screen.getByText('Health')).toBeInTheDocument()
   })
 
-  it('does not show missing tools section when all found', async () => {
+  it('shows found deps in health section', async () => {
     vi.mocked(getDependencies).mockResolvedValue([mockDep('restic', 'found')])
     renderWithProviders(<DeviceSidebar />)
-    await waitFor(() => screen.getByText(/Add Device/i))
-    expect(screen.queryByText('Missing tools')).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.getByText('restic')).toBeInTheDocument())
+    expect(screen.getByText('Health')).toBeInTheDocument()
   })
 
   it('shows different stage dots', async () => {

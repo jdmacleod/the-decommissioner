@@ -11,6 +11,7 @@ import {
 import { JobLog } from '../components/JobLog'
 import type { Device, StorageType, WipeJobMetadata } from '../types/api'
 
+// Keep in sync with APPLE_DEVICE_TYPES in backend/app/engines/wipe.py
 const APPLE_TYPES = ['mac', 'iphone', 'ipad', 'network_volume'] as const
 type AppleType = (typeof APPLE_TYPES)[number]
 
