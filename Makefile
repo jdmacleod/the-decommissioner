@@ -1,4 +1,4 @@
-.PHONY: dev-backend dev-frontend build install-deps test lint check docker-up
+.PHONY: dev-backend dev-frontend build install-deps pre-commit-install test lint check docker-up
 
 BACKEND_DIR = backend
 FRONTEND_DIR = frontend
@@ -22,7 +22,7 @@ build:
 
 install-deps:
 	@echo "==> Installing Python deps"
-	cd $(BACKEND_DIR) && uv venv --python 3.11 .venv && uv pip install -r requirements.txt
+	cd $(BACKEND_DIR) && uv venv --python 3.11 .venv && uv pip install -e ".[dev]"
 	@echo "==> Installing Node deps"
 	cd $(FRONTEND_DIR) && npm install
 	@echo "==> Checking system tools"
@@ -33,6 +33,11 @@ install-deps:
 			echo "  [missing] $$tool"; \
 		fi; \
 	done
+	@echo "==> Installing pre-commit hooks"
+	pre-commit install
+
+pre-commit-install:
+	pre-commit install
 
 test:
 	cd $(BACKEND_DIR) && .venv/bin/pytest

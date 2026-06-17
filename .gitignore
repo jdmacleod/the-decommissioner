@@ -35,3 +35,15 @@ frontend/*.png
 .pytest-out.txt
 test-output.txt
 backend/.coverage
+
+# Environment — use .env.example as template; never commit real secrets
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+
+# pre-commit managed envs
+.pre-commit-run/
