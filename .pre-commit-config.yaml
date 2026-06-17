@@ -10,6 +10,8 @@ repos:
       - id: check-merge-conflict
       - id: check-added-large-files
         args: [--maxkb=500]
+      - id: check-toml
+      - id: detect-private-key
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.15
@@ -33,7 +35,7 @@ repos:
 
       - id: prettier
         name: prettier (frontend)
-        entry: bash -c 'cd frontend && npm run format:check'
+        entry: bash -c 'cd frontend && npm run format'
         language: system
         files: \.(ts|tsx)$
         pass_filenames: false
