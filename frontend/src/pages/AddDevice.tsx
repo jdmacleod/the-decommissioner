@@ -96,157 +96,162 @@ export function AddDevice() {
   const isVolumeBased = VOLUME_TYPES.includes(deviceType)
 
   return (
-    <div className="max-w-lg mx-auto p-6">
-      <h2 className="text-xl font-bold text-gray-900 mb-6">Add Device</h2>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <Label>Type *</Label>
-          <select
-            value={deviceType}
-            onChange={(e) => {
-              setDeviceType(e.target.value as DeviceType)
-              setDetectError(null)
-              setVolumes([])
-              setVolumeScanDone(false)
-            }}
-            className="w-full h-11 rounded-lg border border-input bg-background px-3 text-sm appearance-none bg-no-repeat pr-9 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none"
-            style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
-              backgroundPosition: 'right 0.75rem center',
-            }}
-          >
-            {DEVICE_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {isIos && (
-          <div className="flex items-center gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => detectMutation.mutate()}
-              disabled={detectMutation.isPending}
-            >
-              {detectMutation.isPending ? 'Detecting…' : 'Detect Connected Device'}
-            </Button>
-            {detectError && <span className="text-xs text-red-600">{detectError}</span>}
-            {detectMutation.isSuccess && !detectError && (
-              <span className="text-xs text-green-600">✓ Device detected</span>
-            )}
-          </div>
-        )}
-
-        <div>
-          <Label>Name *</Label>
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            placeholder="e.g. Jason's 2019 MBP"
-            className="h-11"
-          />
-        </div>
-
-        {!isIos && (
+    <div>
+      <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <h1 className="text-xl font-bold text-gray-900">Add Device</h1>
+        <p className="text-xs text-gray-400 mt-0.5">Register a new device for decommissioning</p>
+      </div>
+      <div className="max-w-lg mx-auto p-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <Label>Source Path</Label>
-              {isVolumeBased && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => volumeMutation.mutate()}
-                  disabled={volumeMutation.isPending}
-                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-auto py-1"
-                >
-                  {volumeMutation.isPending ? 'Scanning…' : 'Scan volumes'}
-                </Button>
+            <Label>Type *</Label>
+            <select
+              value={deviceType}
+              onChange={(e) => {
+                setDeviceType(e.target.value as DeviceType)
+                setDetectError(null)
+                setVolumes([])
+                setVolumeScanDone(false)
+              }}
+              className="w-full h-11 rounded-lg border border-input bg-background px-3 text-sm appearance-none bg-no-repeat pr-9 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+                backgroundPosition: 'right 0.75rem center',
+              }}
+            >
+              {DEVICE_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {isIos && (
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => detectMutation.mutate()}
+                disabled={detectMutation.isPending}
+              >
+                {detectMutation.isPending ? 'Detecting…' : 'Detect Connected Device'}
+              </Button>
+              {detectError && <span className="text-xs text-red-600">{detectError}</span>}
+              {detectMutation.isSuccess && !detectError && (
+                <span className="text-xs text-green-600">✓ Device detected</span>
               )}
             </div>
-            {isVolumeBased && volumeScanDone && volumes.length > 0 ? (
-              <select
-                value={sourcePath}
-                onChange={(e) => {
-                  const selected = volumes.find((v) => v.path === e.target.value)
-                  setSourcePath(e.target.value)
-                  if (selected?.serial_number) setSerialNumber(selected.serial_number)
-                  if (selected?.is_network_mount) setDeviceType('network_volume')
-                }}
-                className="w-full h-11 rounded-lg border border-input bg-background px-3 text-sm font-mono focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none"
-              >
-                {volumes.map((v) => (
-                  <option key={v.path} value={v.path}>
-                    {v.label} — {v.path}
-                  </option>
-                ))}
-                <option value="">Enter manually…</option>
-              </select>
-            ) : (
-              <Input
-                value={sourcePath}
-                onChange={(e) => setSourcePath(e.target.value)}
-                placeholder="/Volumes/MyDrive"
-                className="h-11 font-mono"
-              />
-            )}
-            {isVolumeBased && volumeScanDone && volumes.length === 0 && (
-              <div className="text-xs text-gray-400 mt-1">
-                No volumes detected. Enter path manually.
+          )}
+
+          <div>
+            <Label>Name *</Label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              placeholder="e.g. Jason's 2019 MBP"
+              className="h-11"
+            />
+          </div>
+
+          {!isIos && (
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <Label>Source Path</Label>
+                {isVolumeBased && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => volumeMutation.mutate()}
+                    disabled={volumeMutation.isPending}
+                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-auto py-1"
+                  >
+                    {volumeMutation.isPending ? 'Scanning…' : 'Scan volumes'}
+                  </Button>
+                )}
               </div>
-            )}
+              {isVolumeBased && volumeScanDone && volumes.length > 0 ? (
+                <select
+                  value={sourcePath}
+                  onChange={(e) => {
+                    const selected = volumes.find((v) => v.path === e.target.value)
+                    setSourcePath(e.target.value)
+                    if (selected?.serial_number) setSerialNumber(selected.serial_number)
+                    if (selected?.is_network_mount) setDeviceType('network_volume')
+                  }}
+                  className="w-full h-11 rounded-lg border border-input bg-background px-3 text-sm font-mono focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none"
+                >
+                  {volumes.map((v) => (
+                    <option key={v.path} value={v.path}>
+                      {v.label} — {v.path}
+                    </option>
+                  ))}
+                  <option value="">Enter manually…</option>
+                </select>
+              ) : (
+                <Input
+                  value={sourcePath}
+                  onChange={(e) => setSourcePath(e.target.value)}
+                  placeholder="/Volumes/MyDrive"
+                  className="h-11 font-mono"
+                />
+              )}
+              {isVolumeBased && volumeScanDone && volumes.length === 0 && (
+                <div className="text-xs text-gray-400 mt-1">
+                  No volumes detected. Enter path manually.
+                </div>
+              )}
+            </div>
+          )}
+
+          {isIos && (
+            <div className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+              iOS devices are extracted to a local staging directory automatically. Connect the
+              device and use &ldquo;Detect&rdquo; above to auto-fill fields.
+            </div>
+          )}
+
+          <div>
+            <Label>Serial Number</Label>
+            <Input
+              value={serialNumber}
+              onChange={(e) => setSerialNumber(e.target.value)}
+              className="h-11"
+            />
           </div>
-        )}
 
-        {isIos && (
-          <div className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-            iOS devices are extracted to a local staging directory automatically. Connect the device
-            and use &ldquo;Detect&rdquo; above to auto-fill fields.
+          <div>
+            <Label>Notes</Label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 placeholder:text-muted-foreground"
+            />
           </div>
-        )}
 
-        <div>
-          <Label>Serial Number</Label>
-          <Input
-            value={serialNumber}
-            onChange={(e) => setSerialNumber(e.target.value)}
-            className="h-11"
-          />
-        </div>
+          <div>
+            <Label>
+              Photo <span className="font-normal text-gray-400">(optional)</span>
+            </Label>
+            <PhotoUpload value={photo} existingUrl={null} onChange={setPhoto} />
+          </div>
 
-        <div>
-          <Label>Notes</Label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={3}
-            className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 placeholder:text-muted-foreground"
-          />
-        </div>
+          {mutation.error && <div className="text-red-600 text-sm">{String(mutation.error)}</div>}
 
-        <div>
-          <Label>
-            Photo <span className="font-normal text-gray-400">(optional)</span>
-          </Label>
-          <PhotoUpload value={photo} existingUrl={null} onChange={setPhoto} />
-        </div>
-
-        {mutation.error && <div className="text-red-600 text-sm">{String(mutation.error)}</div>}
-
-        <div className="flex gap-3 pt-1">
-          <Button type="submit" disabled={mutation.isPending} className="h-11 px-6">
-            {mutation.isPending ? 'Creating…' : 'Create Device'}
-          </Button>
-          <Button type="button" variant="outline" onClick={() => navigate('/')} className="h-11">
-            Cancel
-          </Button>
-        </div>
-      </form>
+          <div className="flex gap-3 pt-1">
+            <Button type="submit" disabled={mutation.isPending} className="h-11 px-6">
+              {mutation.isPending ? 'Creating…' : 'Create Device'}
+            </Button>
+            <Button type="button" variant="outline" onClick={() => navigate('/')} className="h-11">
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   )
 }
