@@ -12,6 +12,7 @@ import {
 import { StageProgress } from '../components/StageProgress'
 import { PhotoUpload } from '../components/PhotoUpload'
 import { DeviceIcon } from '../components/DeviceIcon'
+import { Button } from '@/components/ui/button'
 import { CatalogStage } from '../stages/CatalogStage'
 import { VerifyStage } from '../stages/VerifyStage'
 import { MigrateStage } from '../stages/MigrateStage'
@@ -189,35 +190,39 @@ export function DeviceWizard() {
           </div>
 
           {!confirmingDelete ? (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => setConfirmingDelete(true)}
-              className="mt-3 text-xs text-red-500 hover:text-red-700"
+              className="mt-2 text-red-500 hover:text-red-700 hover:bg-red-50 h-auto px-0 text-xs"
             >
               Delete device
-            </button>
+            </Button>
           ) : (
             <div className="mt-3">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-600">Delete forever?</span>
-                <button
+                <Button
                   type="button"
+                  variant="destructive"
+                  size="xs"
                   onClick={() => deleteMutation.mutate()}
                   disabled={deleteMutation.isPending}
-                  className="text-xs text-white bg-red-600 hover:bg-red-700 px-2 py-0.5 rounded disabled:opacity-50"
                 >
                   {deleteMutation.isPending ? 'Deleting…' : 'Yes, delete'}
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="xs"
                   onClick={() => {
                     setConfirmingDelete(false)
                     deleteMutation.reset()
                   }}
-                  className="text-xs text-gray-500 hover:text-gray-700"
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
               {deleteMutation.isError && (
                 <div className="mt-1 text-xs text-red-600">

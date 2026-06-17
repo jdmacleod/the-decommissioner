@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createDevice, detectIos, detectVolumes, uploadDevicePhoto } from '../lib/api'
 import { PhotoUpload } from '../components/PhotoUpload'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import type { DeviceType, VolumeEntry } from '../types/api'
 
 const DEVICE_TYPES: { value: DeviceType; label: string }[] = [
@@ -17,6 +19,10 @@ const DEVICE_TYPES: { value: DeviceType; label: string }[] = [
 
 const IOS_TYPES: DeviceType[] = ['iphone', 'ipad']
 const VOLUME_TYPES: DeviceType[] = ['hard_drive', 'usb_drive', 'network_volume']
+
+function Label({ children }: { children: React.ReactNode }) {
+  return <label className="block text-sm font-medium text-gray-700 mb-1">{children}</label>
+}
 
 export function AddDevice() {
   const navigate = useNavigate()
@@ -35,7 +41,6 @@ export function AddDevice() {
     mutationFn: createDevice,
     onSuccess: async (device) => {
       if (photo) {
-        // Best-effort — navigate regardless of photo upload result
         await uploadDevicePhoto(device.id, photo).catch(() => {})
       }
       queryClient.invalidateQueries({ queryKey: ['devices'] })
@@ -95,7 +100,7 @@ export function AddDevice() {
       <h2 className="text-xl font-bold text-gray-900 mb-6">Add Device</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
+          <Label>Type *</Label>
           <select
             value={deviceType}
             onChange={(e) => {
@@ -104,7 +109,7 @@ export function AddDevice() {
               setVolumes([])
               setVolumeScanDone(false)
             }}
-            className="w-full border border-gray-300 rounded px-3 py-3 text-sm appearance-none bg-white bg-no-repeat bg-right pr-8"
+            className="w-full h-11 rounded-lg border border-input bg-background px-3 text-sm appearance-none bg-no-repeat pr-9 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none"
             style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundPosition: 'right 0.75rem center' }}
           >
             {DEVICE_TYPES.map((t) => (
@@ -117,14 +122,15 @@ export function AddDevice() {
 
         {isIos && (
           <div className="flex items-center gap-3">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => detectMutation.mutate()}
               disabled={detectMutation.isPending}
-              className="text-sm border border-blue-300 text-blue-700 px-3 py-1.5 rounded hover:bg-blue-50 disabled:opacity-50"
             >
               {detectMutation.isPending ? 'Detecting…' : 'Detect Connected Device'}
-            </button>
+            </Button>
             {detectError && <span className="text-xs text-red-600">{detectError}</span>}
             {detectMutation.isSuccess && !detectError && (
               <span className="text-xs text-green-600">✓ Device detected</span>
@@ -133,29 +139,31 @@ export function AddDevice() {
         )}
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-          <input
+          <Label>Name *</Label>
+          <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
             placeholder="e.g. Jason's 2019 MBP"
-            className="w-full border border-gray-300 rounded px-3 py-3 text-sm"
+            className="h-11"
           />
         </div>
 
         {!isIos && (
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-sm font-medium text-gray-700">Source Path</label>
+              <Label>Source Path</Label>
               {isVolumeBased && (
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => volumeMutation.mutate()}
                   disabled={volumeMutation.isPending}
-                  className="text-xs text-blue-600 hover:underline disabled:opacity-50 py-2 px-1"
+                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-auto py-1"
                 >
                   {volumeMutation.isPending ? 'Scanning…' : 'Scan volumes'}
-                </button>
+                </Button>
               )}
             </div>
             {isVolumeBased && volumeScanDone && volumes.length > 0 ? (
@@ -167,7 +175,7 @@ export function AddDevice() {
                   if (selected?.serial_number) setSerialNumber(selected.serial_number)
                   if (selected?.is_network_mount) setDeviceType('network_volume')
                 }}
-                className="w-full border border-gray-300 rounded px-3 py-3 text-sm font-mono"
+                className="w-full h-11 rounded-lg border border-input bg-background px-3 text-sm font-mono focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none"
               >
                 {volumes.map((v) => (
                   <option key={v.path} value={v.path}>
@@ -177,71 +185,61 @@ export function AddDevice() {
                 <option value="">Enter manually…</option>
               </select>
             ) : (
-              <input
+              <Input
                 value={sourcePath}
                 onChange={(e) => setSourcePath(e.target.value)}
                 placeholder="/Volumes/MyDrive"
-                className="w-full border border-gray-300 rounded px-3 py-3 text-sm font-mono"
+                className="h-11 font-mono"
               />
             )}
             {isVolumeBased && volumeScanDone && volumes.length === 0 && (
-              <div className="text-xs text-gray-400 mt-1">
-                No volumes detected. Enter path manually.
-              </div>
+              <div className="text-xs text-gray-400 mt-1">No volumes detected. Enter path manually.</div>
             )}
           </div>
         )}
 
         {isIos && (
-          <div className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded px-3 py-2">
+          <div className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
             iOS devices are extracted to a local staging directory automatically. Connect the device
             and use &ldquo;Detect&rdquo; above to auto-fill fields.
           </div>
         )}
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Serial Number</label>
-          <input
+          <Label>Serial Number</Label>
+          <Input
             value={serialNumber}
             onChange={(e) => setSerialNumber(e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-3 text-sm"
+            className="h-11"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+          <Label>Notes</Label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
-            className="w-full border border-gray-300 rounded px-3 py-3 text-sm"
+            className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 placeholder:text-muted-foreground"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label>
             Photo <span className="font-normal text-gray-400">(optional)</span>
-          </label>
+          </Label>
           <PhotoUpload value={photo} existingUrl={null} onChange={setPhoto} />
         </div>
 
         {mutation.error && <div className="text-red-600 text-sm">{String(mutation.error)}</div>}
 
-        <div className="flex gap-3">
-          <button
-            type="submit"
-            disabled={mutation.isPending}
-            className="bg-blue-600 text-white px-4 py-3 rounded text-sm hover:bg-blue-700 disabled:opacity-50 min-h-[44px]"
-          >
-            {mutation.isPending ? 'Creating...' : 'Create Device'}
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className="border border-gray-300 px-4 py-3 rounded text-sm text-gray-700 hover:bg-gray-50 min-h-[44px]"
-          >
+        <div className="flex gap-3 pt-1">
+          <Button type="submit" disabled={mutation.isPending} className="h-11 px-6">
+            {mutation.isPending ? 'Creating…' : 'Create Device'}
+          </Button>
+          <Button type="button" variant="outline" onClick={() => navigate('/')} className="h-11">
             Cancel
-          </button>
+          </Button>
         </div>
       </form>
     </div>

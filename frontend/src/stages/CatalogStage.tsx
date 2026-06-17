@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getDependencies, getFileEntries, triggerJob, clearStaging } from '../lib/api'
 import { JobLog } from '../components/JobLog'
+import { Button } from '@/components/ui/button'
 import type { Device, DupStats } from '../types/api'
 
 interface CatalogStageProps {
@@ -90,19 +91,20 @@ export function CatalogStage({ device, deviceId, dupStats }: CatalogStageProps) 
             >
               Review Files
             </Link>
-            <Link
-              to={`/devices/${deviceId}/duplicates`}
-              className="text-sm bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700"
-            >
-              {device.stage === 'analyzed' ? 'View Duplicates' : 'Resolve Duplicates →'}
-            </Link>
-            <button
+            <Button asChild size="sm">
+              <Link to={`/devices/${deviceId}/duplicates`}>
+                {device.stage === 'analyzed' ? 'View Duplicates' : 'Resolve Duplicates →'}
+              </Link>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => catalogMutation.mutate()}
               disabled={catalogMutation.isPending}
-              className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2 ml-auto"
+              className="ml-auto text-gray-500"
             >
               Re-catalog
-            </button>
+            </Button>
           </div>
           {device.staging_path && (
             <div className="mt-3 flex items-center justify-between text-xs text-gray-400 bg-gray-50 border border-gray-100 rounded px-3 py-2">
@@ -132,13 +134,12 @@ export function CatalogStage({ device, deviceId, dupStats }: CatalogStageProps) 
                 Source:{' '}
                 <code className="bg-gray-100 px-1 rounded text-xs">{device.source_path}</code>
               </div>
-              <button
+              <Button
                 onClick={() => catalogMutation.mutate()}
                 disabled={!canCatalog || catalogMutation.isPending}
-                className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 disabled:opacity-50"
               >
                 {catalogMutation.isPending ? 'Starting…' : 'Start Catalog'}
-              </button>
+              </Button>
             </div>
           ) : (
             <div className="text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 rounded px-3 py-2">

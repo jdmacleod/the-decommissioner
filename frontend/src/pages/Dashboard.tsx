@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { getDevices } from '../lib/api'
 import { DeviceCard } from '../components/DeviceCard'
 import { EmptyState } from '../components/EmptyState'
+import { Button } from '@/components/ui/button'
 import type { DeviceStage } from '../types/api'
 
 const STAGE_GROUPS: { label: string; stages: DeviceStage[]; color: string }[] = [
@@ -43,12 +44,9 @@ export function Dashboard() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Decommissioner</h1>
-        <Link
-          to="/devices/new"
-          className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
-        >
-          + Add Device
-        </Link>
+        <Button asChild>
+          <Link to="/devices/new">+ Add Device</Link>
+        </Button>
       </div>
 
       {devices.length === 0 ? (

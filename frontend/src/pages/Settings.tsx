@@ -14,6 +14,7 @@ import { StorageTargetCard } from '../components/StorageTargetCard'
 import { StorageTargetForm } from '../components/StorageTargetForm'
 import type { StorageTargetFormValues } from '../components/StorageTargetForm'
 import { DependencyBadge } from '../components/DependencyBadge'
+import { Button } from '@/components/ui/button'
 
 export function Settings() {
   const queryClient = useQueryClient()
@@ -89,12 +90,9 @@ export function Settings() {
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-gray-800">Storage Target</h3>
           {!showAddForm && (
-            <button
-              onClick={() => setShowAddForm(true)}
-              className="text-xs border border-gray-300 px-3 py-1.5 rounded hover:bg-gray-50"
-            >
+            <Button variant="outline" size="sm" onClick={() => setShowAddForm(true)}>
               + Add
-            </button>
+            </Button>
           )}
         </div>
 
@@ -139,13 +137,14 @@ export function Settings() {
       <div className="bg-white border border-gray-200 rounded-lg p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-gray-800">System Health</h3>
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => recheck.mutate()}
             disabled={recheck.isPending}
-            className="text-xs border border-gray-300 px-3 py-1.5 rounded hover:bg-gray-50 disabled:opacity-50"
           >
             {recheck.isPending ? 'Checking…' : 'Re-check'}
-          </button>
+          </Button>
         </div>
         <table className="w-full text-sm">
           <thead>
