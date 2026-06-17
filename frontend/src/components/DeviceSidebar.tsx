@@ -38,17 +38,17 @@ export function DeviceSidebar() {
   })
 
   return (
-    <aside className="hidden md:flex w-56 shrink-0 bg-white border-r border-gray-200 flex-col min-h-screen">
+    <aside className="hidden md:flex w-56 shrink-0 bg-gray-900 flex-col min-h-screen">
       {/* Logo */}
-      <div className="px-4 py-4 border-b border-gray-100">
-        <Link to="/" className="font-bold text-gray-900 text-sm tracking-tight py-2 block">
+      <div className="px-4 py-4 border-b border-gray-700/50">
+        <Link to="/" className="font-bold text-white text-sm tracking-tight py-2 block">
           ◈ the-decommissioner
         </Link>
       </div>
 
       {/* Device list */}
       <div className="flex-1 overflow-y-auto py-3">
-        <div className="px-4 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wide">
+        <div className="px-4 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
           Devices
         </div>
         <nav className="space-y-0.5">
@@ -58,8 +58,10 @@ export function DeviceSidebar() {
               <Link
                 key={device.id}
                 to={`/devices/${device.id}`}
-                className={`flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-50 ${
-                  activeId === device.id ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'
+                className={`flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-800 ${
+                  activeId === device.id
+                    ? 'bg-gray-800 text-white font-medium'
+                    : 'text-gray-400 hover:text-gray-200'
                 }`}
               >
                 {dot ? (
@@ -74,20 +76,23 @@ export function DeviceSidebar() {
                     className="w-5 h-5 rounded-full object-cover shrink-0"
                   />
                 ) : (
-                  <DeviceIcon type={device.device_type} className="w-4 h-4 shrink-0" />
+                  <DeviceIcon
+                    type={device.device_type}
+                    className="w-4 h-4 shrink-0 text-gray-500"
+                  />
                 )}
                 <span className="truncate">{device.name}</span>
               </Link>
             )
           })}
           {devices.length === 0 && (
-            <div className="px-4 py-2 text-xs text-gray-400 italic">No devices yet</div>
+            <div className="px-4 py-2 text-xs text-gray-600 italic">No devices yet</div>
           )}
         </nav>
 
         <Link
           to="/devices/new"
-          className="flex items-center gap-2 px-4 py-2 mt-2 text-sm text-blue-600 hover:bg-blue-50"
+          className="flex items-center gap-2 px-4 py-2 mt-2 text-sm text-blue-400 hover:text-blue-300 hover:bg-gray-800"
         >
           <span className="text-base leading-none">+</span>
           <span>Add Device</span>
@@ -95,11 +100,11 @@ export function DeviceSidebar() {
       </div>
 
       {/* Health footer */}
-      <div className="border-t border-gray-100 py-3">
+      <div className="border-t border-gray-700/50 py-3">
         {/* Storage targets health */}
         {storageTargets.length > 0 && (
           <div className="px-4 mb-2">
-            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
               Storage
             </div>
             {storageTargets.map((t) => (
@@ -110,7 +115,7 @@ export function DeviceSidebar() {
                   }`}
                 />
                 <span
-                  className={`truncate ${t.initialized ? 'text-gray-600' : 'text-yellow-700'}`}
+                  className={`truncate ${t.initialized ? 'text-gray-400' : 'text-yellow-500'}`}
                   title={t.path}
                 >
                   {t.initialized ? '✓ ' : ''}
@@ -124,14 +129,14 @@ export function DeviceSidebar() {
         {/* Health — all deps */}
         {deps.length > 0 && (
           <div className="px-4 mb-2">
-            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
               Health
             </div>
             {deps.map((d) => (
               <div
                 key={d.name}
                 className={`flex items-center gap-1.5 text-xs py-0.5 ${
-                  d.status === 'found' ? 'text-gray-600' : 'text-red-600'
+                  d.status === 'found' ? 'text-gray-400' : 'text-red-400'
                 }`}
               >
                 <span
@@ -148,7 +153,7 @@ export function DeviceSidebar() {
         <div className="flex items-center justify-between px-4">
           <Link
             to="/settings"
-            className="flex items-center gap-1 py-2.5 text-xs text-gray-500 hover:text-gray-700"
+            className="flex items-center gap-1 py-2.5 text-xs text-gray-500 hover:text-gray-300"
           >
             ⚙ Settings
           </Link>
@@ -156,12 +161,12 @@ export function DeviceSidebar() {
             href="https://github.com/jdmacleod/the-decommissioner"
             target="_blank"
             rel="noopener noreferrer"
-            className="py-2.5 text-xs text-gray-500 hover:text-gray-700"
+            className="py-2.5 text-xs text-gray-500 hover:text-gray-300"
           >
             ? Help
           </a>
         </div>
-        <div className="px-4 pt-1 text-xs text-gray-500 select-none">v{__APP_VERSION__}</div>
+        <div className="px-4 pt-1 text-xs text-gray-600 select-none">v{__APP_VERSION__}</div>
       </div>
     </aside>
   )
