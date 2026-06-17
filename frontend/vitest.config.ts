@@ -31,6 +31,8 @@ export default defineConfig({
         '**/*.d.ts',
         'src/App.tsx',
         'src/types/**',
+        // shadcn Select is installed but not yet used by any app component
+        'src/components/ui/select.tsx',
       ],
     },
   },
