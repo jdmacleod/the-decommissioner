@@ -1,5 +1,12 @@
 # the-decommissioner
 
+[![CI](https://github.com/jdmacleod/the-decommissioner/actions/workflows/ci.yml/badge.svg)](https://github.com/jdmacleod/the-decommissioner/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/jdmacleod/the-decommissioner/graph/badge.svg)](https://codecov.io/gh/jdmacleod/the-decommissioner)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Node.js 22+](https://img.shields.io/badge/node-22+-339933.svg)](https://nodejs.org/)
+[![Platform: macOS · Linux](https://img.shields.io/badge/platform-macOS%20%C2%B7%20Linux-lightgrey.svg)](https://github.com/jdmacleod/the-decommissioner)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A self-hosted service that guides you through decommissioning old hardware — cataloging files, migrating keepers to a deduplicated backup target, wiping drives, and logging devices for recycling.
 
 Runs on **macOS and Linux**. Wraps proven CLI tools ([restic](https://restic.net), [czkawka](https://github.com/qarmin/czkawka), [nwipe](https://github.com/martijnvanbrummelen/nwipe)) rather than reimplementing their logic.
