@@ -156,7 +156,7 @@ describe('DeviceWizard', () => {
   it('shows migrate placeholder when not yet in migrate stage', async () => {
     vi.mocked(getDevice).mockResolvedValue(makeDevice({ stage: 'cataloged' }))
     renderWithProviders(<DeviceWizard />, { initialPath: '/devices/1', routePath: '/devices/:id' })
-    await waitFor(() => screen.getByText(/available after duplicates/i))
+    await waitFor(() => screen.getByText(/step 3 — migrate to storage/i))
   })
 
   it('shows WipeStage for verified device', async () => {
