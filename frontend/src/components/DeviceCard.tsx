@@ -126,7 +126,7 @@ export function DeviceCard({ device }: { device: Device }) {
       {action && (
         <Link
           to={action.href}
-          className="mt-3 block text-center text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded px-2 py-1 hover:bg-blue-100"
+          className="mt-3 block text-center text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded px-2 py-2.5 hover:bg-blue-100 min-h-[44px] flex items-center justify-center"
         >
           {action.label}
         </Link>

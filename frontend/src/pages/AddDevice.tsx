@@ -151,7 +151,7 @@ export function AddDevice() {
                   type="button"
                   onClick={() => volumeMutation.mutate()}
                   disabled={volumeMutation.isPending}
-                  className="text-xs text-blue-600 hover:underline disabled:opacity-50"
+                  className="text-xs text-blue-600 hover:underline disabled:opacity-50 py-2 px-1"
                 >
                   {volumeMutation.isPending ? 'Scanning…' : 'Scan volumes'}
                 </button>
