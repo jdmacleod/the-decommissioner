@@ -351,7 +351,9 @@ def test_usb_device_types_contains_usb_drive():
 
 @pytest.mark.asyncio
 async def test_usb_drive_dispatches_to_ssd_checklist(session: Session):
-    device = make_device(session, device_type="usb_drive", stage="verified", source_path="/Volumes/USB")
+    device = make_device(
+        session, device_type="usb_drive", stage="verified", source_path="/Volumes/USB"
+    )
     job = make_job(session, device.id, job_type=JobType.wipe)
 
     dispatched = []

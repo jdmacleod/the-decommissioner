@@ -330,7 +330,9 @@ def delete_device(device_id: int, session: SessionDep):
 
     # DuplicateGroups have no direct FK to Device — clean them up before cascade.
     file_entry_ids = {fe.id for fe in device.file_entries}
-    dup_group_ids = {fe.duplicate_group_id for fe in device.file_entries if fe.duplicate_group_id is not None}
+    dup_group_ids = {
+        fe.duplicate_group_id for fe in device.file_entries if fe.duplicate_group_id is not None
+    }
     for dg_id in dup_group_ids:
         dg = session.get(DuplicateGroup, dg_id)
         if dg is None:
@@ -540,15 +542,12 @@ def _detect_storage_type(block_device: str) -> StorageType:
     else:
         try:
             dev_name = block_device.lstrip("/").split("/")[-1]  # /dev/sdb → sdb
-            rotational = (
-                subprocess.run(
-                    ["cat", f"/sys/block/{dev_name}/queue/rotational"],
-                    capture_output=True,
-                    text=True,
-                    timeout=5,
-                )
-                .stdout.strip()
-            )
+            rotational = subprocess.run(
+                ["cat", f"/sys/block/{dev_name}/queue/rotational"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            ).stdout.strip()
             if rotational == "0":
                 return StorageType.ssd
             if rotational == "1":

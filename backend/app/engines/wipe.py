@@ -91,9 +91,7 @@ async def run_wipe(
 ) -> None:
     if device.device_type in APPLE_DEVICE_TYPES:
         await _run_checklist_wipe(job_id, device, session, runner)
-    elif device.device_type in USB_DEVICE_TYPES:
-        await _run_ssd_checklist_wipe(job_id, device, session, runner)
-    elif device.storage_type == StorageType.ssd:
+    elif device.device_type in USB_DEVICE_TYPES or device.storage_type == StorageType.ssd:
         await _run_ssd_checklist_wipe(job_id, device, session, runner)
     else:
         # hdd or unknown — overwrite path

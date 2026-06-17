@@ -154,7 +154,10 @@ def test_list_targets_multiple(client: TestClient, session: Session) -> None:
 
 def test_init_target_timeout(client: TestClient, session: Session) -> None:
     make_storage_target(session)
-    with patch("app.api.storage_targets.subprocess.run", side_effect=subprocess.TimeoutExpired(cmd="restic", timeout=60)):
+    with patch(
+        "app.api.storage_targets.subprocess.run",
+        side_effect=subprocess.TimeoutExpired(cmd="restic", timeout=60),
+    ):
         r = client.post("/api/storage-targets/1/init")
     assert r.status_code == 200
     data = r.json()
@@ -167,7 +170,10 @@ def test_init_target_timeout(client: TestClient, session: Session) -> None:
 
 def test_test_target_timeout(client: TestClient, session: Session) -> None:
     make_storage_target(session)
-    with patch("app.api.storage_targets.subprocess.run", side_effect=subprocess.TimeoutExpired(cmd="restic", timeout=30)):
+    with patch(
+        "app.api.storage_targets.subprocess.run",
+        side_effect=subprocess.TimeoutExpired(cmd="restic", timeout=30),
+    ):
         r = client.post("/api/storage-targets/1/test")
     assert r.status_code == 200
     data = r.json()

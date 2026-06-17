@@ -5,8 +5,8 @@ from pydantic_settings import BaseSettings
 # Resolve .env search order: backend/ first, then project root.
 # The Makefile runs `cd backend && uvicorn ...` so cwd is backend/.
 # A plain "env_file": ".env" would miss the project-root .env entirely.
-_BACKEND_ENV = Path(__file__).parent.parent.parent / ".env"      # backend/.env
-_ROOT_ENV = _BACKEND_ENV.parent.parent / ".env"                  # project-root .env
+_BACKEND_ENV = Path(__file__).parent.parent.parent / ".env"  # backend/.env
+_ROOT_ENV = _BACKEND_ENV.parent.parent / ".env"  # project-root .env
 _ENV_FILES = [str(p) for p in (_BACKEND_ENV, _ROOT_ENV) if p.exists()]
 
 
