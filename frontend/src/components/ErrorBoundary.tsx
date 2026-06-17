@@ -28,7 +28,9 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="flex items-center justify-center min-h-screen bg-gray-50">
           <div className="max-w-md w-full bg-white border border-red-200 rounded-lg p-6 shadow-sm">
             <h2 className="text-red-700 font-semibold mb-2">Something went wrong</h2>
-            <p className="text-sm text-gray-600 mb-4">{this.state.error.message}</p>
+            <p className="text-sm text-gray-600 mb-4">
+              {this.state.error.message || 'An unexpected error occurred.'}
+            </p>
             <button
               onClick={() => window.location.reload()}
               className="text-sm bg-red-50 text-red-700 border border-red-200 rounded px-3 py-1.5 hover:bg-red-100"

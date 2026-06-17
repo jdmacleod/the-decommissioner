@@ -84,6 +84,14 @@ describe('DeviceSidebar', () => {
     await waitFor(() => expect(screen.getByText(/Settings/i)).toBeInTheDocument())
   })
 
+  it('shows Help link with correct href', async () => {
+    renderWithProviders(<DeviceSidebar />)
+    await waitFor(() => expect(screen.getByText('? Help')).toBeInTheDocument())
+    const helpLink = screen.getByText('? Help').closest('a')
+    expect(helpLink).toHaveAttribute('href', 'https://github.com/jdmacleod/the-decommissioner')
+    expect(helpLink).toHaveAttribute('target', '_blank')
+  })
+
   it('shows dep names in health footer', async () => {
     vi.mocked(getDependencies).mockResolvedValue([mockDep('restic', 'missing')])
     renderWithProviders(<DeviceSidebar />)
@@ -124,5 +132,13 @@ describe('DeviceSidebar', () => {
     renderWithProviders(<DeviceSidebar />)
     await waitFor(() => screen.getByText('My MBP'))
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
+  })
+
+  it('shows network_volume device in sidebar', async () => {
+    vi.mocked(getDevices).mockResolvedValue([
+      makeDevice(1, 'NAS Share', 'cataloged', 'network_volume'),
+    ])
+    renderWithProviders(<DeviceSidebar />)
+    await waitFor(() => expect(screen.getByText('NAS Share')).toBeInTheDocument())
   })
 })

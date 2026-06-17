@@ -1,10 +1,15 @@
+import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 
-function ThrowingChild({ shouldThrow }: { shouldThrow: boolean }) {
-  if (shouldThrow) throw new Error('Test error')
+function ThrowingChild({ shouldThrow, message }: { shouldThrow: boolean; message?: string }) {
+  if (shouldThrow) throw new Error(message ?? 'Test error')
   return <div>OK</div>
+}
+
+function ThrowingStringChild(): React.ReactNode {
+  throw 'string error'
 }
 
 describe('ErrorBoundary', () => {
@@ -28,6 +33,18 @@ describe('ErrorBoundary', () => {
     expect(screen.getByText('Something went wrong')).toBeInTheDocument()
     expect(screen.getByText('Test error')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /reload page/i })).toBeInTheDocument()
+    spy.mockRestore()
+  })
+
+  it('shows generic fallback when a non-Error is thrown', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    render(
+      <ErrorBoundary>
+        <ThrowingStringChild />
+      </ErrorBoundary>
+    )
+    expect(screen.getByText('Something went wrong')).toBeInTheDocument()
+    expect(screen.getByText('An unexpected error occurred.')).toBeInTheDocument()
     spy.mockRestore()
   })
 })
