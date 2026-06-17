@@ -65,7 +65,7 @@ export function Dashboard() {
                     <DeviceCard key={d.id} device={d} />
                   ))}
                   {groupDevices.length === 0 && (
-                    <div className="text-xs text-gray-300 italic">empty</div>
+                    <div className="text-xs text-gray-400 italic">empty</div>
                   )}
                 </div>
               </div>
