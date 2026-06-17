@@ -16,6 +16,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
+      include: ['src/**/*.{ts,tsx}'],
       thresholds: { lines: 88, functions: 70, branches: 84, statements: 88 },
       exclude: [
         'src/test/**',
@@ -24,9 +25,6 @@ export default defineConfig({
         '**/*.d.ts',
         'src/App.tsx',
         'src/types/**',
-        'eslint.config.js',
-        'vite.config.ts',
-        'vitest.config.ts',
       ],
     },
   },
