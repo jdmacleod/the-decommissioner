@@ -50,7 +50,7 @@ export function DeviceSidebar() {
   })
 
   return (
-    <aside className="w-56 shrink-0 bg-white border-r border-gray-200 flex flex-col min-h-screen">
+    <aside className="hidden md:flex w-56 shrink-0 bg-white border-r border-gray-200 flex-col min-h-screen">
       {/* Logo */}
       <div className="px-4 py-4 border-b border-gray-100">
         <Link to="/" className="font-bold text-gray-900 text-sm tracking-tight">
