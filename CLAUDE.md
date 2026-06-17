@@ -210,11 +210,13 @@ up to save space.
 
 ## External Tool Notes
 
-**czkawka_cli JSON output format:**
-`czkawka_cli dup --directories /path --json` outputs a JSON array of arrays.
-Each inner array is a duplicate group; each element has `path`, `size`, `hash`,
-`modified_date` (Unix timestamp). Parse only after the process exits — the JSON
-blob appears at the end of stdout, after progress lines.
+**czkawka_cli JSON output format (v11+):**
+`czkawka_cli dup` no longer accepts `--json` (stdout). Use `--compact-file-to-save <file>`
+to write JSON to a file after the process exits. Format: a dict keyed by file size (as a
+string), each value is a list of duplicate groups; each group is a list of file objects
+with `path`, `size`, `hash` (BLAKE3 by default), `modified_date` (Unix timestamp).
+Use `--ignore-error-code-on-found` (`-W`) to suppress exit code 11 when duplicates are
+found. Use `--do-not-print-results` (`-N`) to suppress the results table on stdout.
 
 **restic tags convention:**
 Tag every snapshot: `["device-{id}", "{device_type}", "the-decommissioner"]`.

@@ -156,18 +156,24 @@ async def test_run_catalog_with_czkawka(
     dup_a = str(source_dir / "dup_a.txt")
     dup_b = str(source_dir / "dup_b.txt")
     size = (source_dir / "dup_a.txt").stat().st_size
+    # czkawka >=11 JSON format: dict keyed by file size, value is list of groups
     czkawka_json = json.dumps(
-        [
-            [
-                {"path": dup_a, "size": size, "hash": "deadbeef" * 8, "modified_date": 0},
-                {"path": dup_b, "size": size, "hash": "deadbeef" * 8, "modified_date": 0},
+        {
+            str(size): [
+                [
+                    {"path": dup_a, "size": size, "hash": "deadbeef" * 8, "modified_date": 0},
+                    {"path": dup_b, "size": size, "hash": "deadbeef" * 8, "modified_date": 0},
+                ]
             ]
-        ]
+        }
     )
 
     async def fake_run(job_id: int, cmd: list, **kwargs: Any):
+        # Write JSON to the output file path specified in cmd
+        out_idx = cmd.index("--compact-file-to-save")
+        with open(cmd[out_idx + 1], "w") as fh:
+            fh.write(czkawka_json)
         yield "Scanning...\n"
-        yield czkawka_json
 
     monkeypatch.setattr(runner, "run", fake_run)
 

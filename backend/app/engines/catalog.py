@@ -1,7 +1,9 @@
+import contextlib
 import hashlib
 import json
 import os
 import shutil
+import tempfile
 from collections import defaultdict
 from datetime import datetime
 
@@ -101,39 +103,48 @@ async def _run_czkawka_pass(
     runner: SubprocessRunner,
     source_path: str,
 ) -> None:
-    cmd = [
-        "czkawka_cli",
-        "dup",
-        "--directories",
-        source_path,
-        "--json",
-        "--hash-type",
-        "SHA256",
-        "--minimal-file-size",
-        "1",
-    ]
-
-    output_lines: list[str] = []
-    async for line in runner.run(job_id, cmd):
-        output_lines.append(line)
-
-    raw = "".join(output_lines)
-    # czkawka prints progress lines then the JSON array on its own line at the end.
-    # rfind("\n[") locates the last line that begins with "[" (the JSON array).
-    newline_pos = raw.rfind("\n[")
-    if newline_pos != -1:
-        json_start = newline_pos + 1
-    else:
-        json_start = raw.find("[")  # no leading text — JSON starts at the top
-    if json_start == -1:
-        return
-
+    # czkawka >=11 writes JSON to a file (no --json stdout flag).
+    # Exit code 11 means "duplicates found" — not an error; -W suppresses it.
+    fd, json_path = tempfile.mkstemp(suffix=".json", prefix="czkawka_")
+    os.close(fd)
     try:
-        dup_groups = json.loads(raw[json_start:])
-    except json.JSONDecodeError:
-        return
+        cmd = [
+            "czkawka_cli",
+            "dup",
+            "--directories",
+            source_path,
+            "--compact-file-to-save",
+            json_path,
+            "--minimal-file-size",
+            "1",
+            "--do-not-print-results",
+            "--ignore-error-code-on-found",
+        ]
 
-    _apply_czkawka_results(dup_groups, device, session)
+        async for _line in runner.run(job_id, cmd):
+            pass
+
+        try:
+            with open(json_path) as fh:
+                raw = fh.read().strip()
+        except OSError:
+            return
+
+        if not raw:
+            return
+
+        try:
+            # v11 format: {"<size_key>": [[{path, size, hash, modified_date}, ...], ...], ...}
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            return
+
+        # Flatten the size-keyed dict into a single list of groups
+        dup_groups = [group for groups in data.values() for group in groups]
+        _apply_czkawka_results(dup_groups, device, session)
+    finally:
+        with contextlib.suppress(OSError):
+            os.unlink(json_path)
 
 
 def _create_dup_group(
