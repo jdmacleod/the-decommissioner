@@ -87,7 +87,7 @@ export function Settings() {
         <h1 className="text-xl font-bold text-gray-900">Settings</h1>
         <p className="text-xs text-gray-400 mt-0.5">Storage targets and system health</p>
       </div>
-      <div className="p-6 max-w-2xl">
+      <div className="p-6 max-w-2xl mx-auto">
         {/* Storage Targets */}
         <div className="bg-white border border-gray-200 rounded-lg p-5 mb-6">
           <div className="flex items-center justify-between mb-4">
