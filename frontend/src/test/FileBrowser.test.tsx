@@ -5,11 +5,11 @@ import { FileBrowser } from '../stages/FileBrowser'
 import { renderWithProviders } from './helpers'
 
 // TanStack Virtual needs ResizeObserver in jsdom
-global.ResizeObserver = class ResizeObserver {
+vi.stubGlobal('ResizeObserver', class ResizeObserver {
   observe() {}
   unobserve() {}
   disconnect() {}
-}
+})
 
 vi.mock('../lib/api', () => ({
   getDevice: vi.fn(),

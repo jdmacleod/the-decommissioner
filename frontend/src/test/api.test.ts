@@ -9,13 +9,13 @@ import {
 } from '../lib/api'
 
 function mockFetch(body: unknown, ok = true, status = 200) {
-  global.fetch = vi.fn().mockResolvedValue({
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
     ok,
     status,
     statusText: ok ? 'OK' : 'Bad Request',
     json: () => Promise.resolve(body),
     text: () => Promise.resolve(JSON.stringify(body)),
-  } as Response)
+  } as Response))
 }
 
 beforeEach(() => {
@@ -57,7 +57,7 @@ describe('devices API', () => {
   })
 
   it('deleteDevice calls DELETE on /api/devices/:id', async () => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: true } as Response)
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true } as Response))
     await deleteDevice(1)
     expect(fetch).toHaveBeenCalledWith('/api/devices/1', expect.objectContaining({ method: 'DELETE' }))
   })
