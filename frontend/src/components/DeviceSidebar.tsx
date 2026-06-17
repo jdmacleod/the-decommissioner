@@ -15,7 +15,6 @@ function stageDot(stage: DeviceStage): { dot: boolean; className: string } {
   return { dot: true, className: 'bg-gray-300' }
 }
 
-
 export function DeviceSidebar() {
   const { id } = useParams<{ id?: string }>()
   const activeId = id ? Number(id) : null

@@ -109,7 +109,13 @@ export function PhotoUpload({ value, existingUrl, onChange, onDelete }: PhotoUpl
           className={`w-full border-2 border-dashed rounded-lg px-4 py-6 text-center transition-colors
             ${dragging ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-gray-400 bg-gray-50'}`}
         >
-          <svg className="mx-auto mb-2 w-8 h-8 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <svg
+            className="mx-auto mb-2 w-8 h-8 text-gray-400"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          >
             <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
             <circle cx="12" cy="13" r="4" />
           </svg>

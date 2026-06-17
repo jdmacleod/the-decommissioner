@@ -20,7 +20,6 @@ const STAGE_LABELS: Partial<Record<DeviceStage, string>> = {
   recycled: 'Recycled ✓',
 }
 
-
 const POST_CATALOG: DeviceStage[] = [
   'cataloged',
   'analyzing',
@@ -116,7 +115,12 @@ export function DeviceCard({ device }: { device: Device }) {
         <DeviceCardStats device={device} />
       </Link>
       {action && (
-        <Button asChild variant="outline" size="sm" className="mt-3 w-full h-11 text-blue-700 border-blue-200 bg-blue-50 hover:bg-blue-100 hover:text-blue-800">
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className="mt-3 w-full h-11 text-blue-700 border-blue-200 bg-blue-50 hover:bg-blue-100 hover:text-blue-800"
+        >
           <Link to={action.href}>{action.label}</Link>
         </Button>
       )}

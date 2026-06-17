@@ -110,7 +110,10 @@ export function AddDevice() {
               setVolumeScanDone(false)
             }}
             className="w-full h-11 rounded-lg border border-input bg-background px-3 text-sm appearance-none bg-no-repeat pr-9 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none"
-            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundPosition: 'right 0.75rem center' }}
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+              backgroundPosition: 'right 0.75rem center',
+            }}
           >
             {DEVICE_TYPES.map((t) => (
               <option key={t.value} value={t.value}>
@@ -193,7 +196,9 @@ export function AddDevice() {
               />
             )}
             {isVolumeBased && volumeScanDone && volumes.length === 0 && (
-              <div className="text-xs text-gray-400 mt-1">No volumes detected. Enter path manually.</div>
+              <div className="text-xs text-gray-400 mt-1">
+                No volumes detected. Enter path manually.
+              </div>
             )}
           </div>
         )}
