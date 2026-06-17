@@ -72,7 +72,8 @@ export function AddDevice() {
       if (result.length > 0 && !sourcePath) {
         setSourcePath(result[0].path)
         if (result[0].serial_number) setSerialNumber(result[0].serial_number)
-        if (result[0].is_network_mount) setDeviceType('network_volume')
+        if (result[0].is_network_mount && deviceType === 'hard_drive')
+          setDeviceType('network_volume')
       }
     },
     onError: () => {

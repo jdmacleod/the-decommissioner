@@ -288,6 +288,20 @@ describe('AddDevice form', () => {
     })
   })
 
+  it('does not override usb_drive type when scan result has is_network_mount true', async () => {
+    vi.mocked(detectVolumes).mockResolvedValue([
+      { path: '/Volumes/MyShare', label: 'MyShare', serial_number: null, is_network_mount: true },
+    ])
+    renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'usb_drive')
+    await userEvent.click(screen.getByRole('button', { name: /scan volumes/i }))
+    await waitFor(() => expect(detectVolumes).toHaveBeenCalled())
+    await waitFor(() => {
+      const selects = screen.getAllByRole('combobox') as HTMLSelectElement[]
+      expect(selects[0].value).toBe('usb_drive')
+    })
+  })
+
   it('shows Scan volumes button for network_volume type', async () => {
     renderWithProviders(<AddDevice />, { initialPath: '/devices/new', routePath: '/devices/new' })
     await userEvent.selectOptions(screen.getByRole('combobox'), 'network_volume')
