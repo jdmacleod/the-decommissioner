@@ -70,7 +70,7 @@ describe('DeviceSidebar', () => {
     renderWithProviders(<DeviceSidebar />, { initialPath: '/devices/3', routePath: '/devices/:id' })
     await waitFor(() => {
       const link = screen.getByText('Active').closest('a')
-      expect(link?.className).toContain('bg-blue-50')
+      expect(link?.className).toContain('bg-gray-800')
     })
   })
 
