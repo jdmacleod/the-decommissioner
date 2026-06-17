@@ -52,43 +52,48 @@ export function Dashboard() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Decommissioner</h1>
-        <Button asChild>
+    <div>
+      <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">Decommissioner</h1>
+          <p className="text-xs text-gray-400 mt-0.5">Hardware decommission pipeline</p>
+        </div>
+        <Button asChild className="h-9 px-4">
           <Link to="/devices/new">+ Add Device</Link>
         </Button>
       </div>
 
-      {devices.length === 0 ? (
-        <EmptyState
-          message="No devices yet."
-          action={{ label: 'Add your first device →', href: '/devices/new' }}
-        />
-      ) : (
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6">
-          {STAGE_GROUPS.map((group) => {
-            const groupDevices = devices.filter((d) => group.stages.includes(d.stage))
-            return (
-              <div key={group.label}>
-                <div
-                  className={`text-xs font-semibold text-gray-500 uppercase mb-3 pb-2 border-b-2 ${group.color}`}
-                >
-                  {group.label} ({groupDevices.length})
+      <div className="p-6">
+        {devices.length === 0 ? (
+          <EmptyState
+            message="No devices yet."
+            action={{ label: 'Add your first device →', href: '/devices/new' }}
+          />
+        ) : (
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6">
+            {STAGE_GROUPS.map((group) => {
+              const groupDevices = devices.filter((d) => group.stages.includes(d.stage))
+              return (
+                <div key={group.label}>
+                  <div
+                    className={`text-xs font-semibold text-gray-500 uppercase mb-3 pb-2 border-b-2 ${group.color}`}
+                  >
+                    {group.label} ({groupDevices.length})
+                  </div>
+                  <div className="space-y-3">
+                    {groupDevices.map((d) => (
+                      <DeviceCard key={d.id} device={d} />
+                    ))}
+                    {groupDevices.length === 0 && (
+                      <div className="text-xs text-gray-400 italic">empty</div>
+                    )}
+                  </div>
                 </div>
-                <div className="space-y-3">
-                  {groupDevices.map((d) => (
-                    <DeviceCard key={d.id} device={d} />
-                  ))}
-                  {groupDevices.length === 0 && (
-                    <div className="text-xs text-gray-400 italic">empty</div>
-                  )}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
