@@ -104,7 +104,8 @@ export function AddDevice() {
               setVolumes([])
               setVolumeScanDone(false)
             }}
-            className="w-full border border-gray-300 rounded px-3 py-3 text-sm"
+            className="w-full border border-gray-300 rounded px-3 py-3 text-sm appearance-none bg-white bg-no-repeat bg-right pr-8"
+            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundPosition: 'right 0.75rem center' }}
           >
             {DEVICE_TYPES.map((t) => (
               <option key={t.value} value={t.value}>

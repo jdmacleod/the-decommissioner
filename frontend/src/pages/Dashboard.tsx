@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { getDevices } from '../lib/api'
 import { DeviceCard } from '../components/DeviceCard'
+import { EmptyState } from '../components/EmptyState'
 import type { DeviceStage } from '../types/api'
 
 const STAGE_GROUPS: { label: string; stages: DeviceStage[]; color: string }[] = [
@@ -27,7 +28,15 @@ export function Dashboard() {
   })
 
   if (isLoading) {
-    return <div className="p-8 text-gray-500">Loading devices...</div>
+    return (
+      <div className="p-8 flex items-center gap-2 text-gray-400">
+        <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+        </svg>
+        Loading…
+      </div>
+    )
   }
 
   return (
@@ -43,12 +52,10 @@ export function Dashboard() {
       </div>
 
       {devices.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">
-          <p className="text-lg">No devices yet.</p>
-          <Link to="/devices/new" className="text-blue-500 text-sm mt-2 block">
-            Add your first device →
-          </Link>
-        </div>
+        <EmptyState
+          message="No devices yet."
+          action={{ label: 'Add your first device →', href: '/devices/new' }}
+        />
       ) : (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6">
           {STAGE_GROUPS.map((group) => {

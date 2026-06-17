@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getDevices, getDependencies, getStorageTargets, getDevicePhotoUrl } from '../lib/api'
+import { DeviceIcon } from './DeviceIcon'
 import type { Device, DeviceStage } from '../types/api'
 
 function stageDot(stage: DeviceStage): { dot: boolean; className: string } {
@@ -14,18 +15,6 @@ function stageDot(stage: DeviceStage): { dot: boolean; className: string } {
   return { dot: true, className: 'bg-gray-300' }
 }
 
-function DeviceTypeIcon({ type }: { type: string }) {
-  const icons: Record<string, string> = {
-    mac: '💻',
-    linux: '🐧',
-    iphone: '📱',
-    ipad: '📱',
-    usb_drive: '💾',
-    hard_drive: '🖥',
-    network_volume: '📦',
-  }
-  return <span className="text-xs">{icons[type] ?? '📦'}</span>
-}
 
 export function DeviceSidebar() {
   const { id } = useParams<{ id?: string }>()
@@ -86,7 +75,7 @@ export function DeviceSidebar() {
                     className="w-5 h-5 rounded-full object-cover shrink-0"
                   />
                 ) : (
-                  <DeviceTypeIcon type={device.device_type} />
+                  <DeviceIcon type={device.device_type} className="w-4 h-4 shrink-0" />
                 )}
                 <span className="truncate">{device.name}</span>
               </Link>

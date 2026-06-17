@@ -152,22 +152,23 @@ export function Settings() {
             <tr className="text-xs text-gray-400 uppercase text-left border-b border-gray-100">
               <th className="pb-2 pr-4">Tool</th>
               <th className="pb-2 pr-4">Status</th>
-              <th className="pb-2 pr-4">Version</th>
-              <th className="pb-2">Install</th>
+              <th className="pb-2">Version</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {deps.map((dep) => (
               <tr key={dep.name}>
-                <td className="py-2 pr-4 font-mono text-xs">{dep.name}</td>
+                <td className="py-2 pr-4">
+                  <div className="font-mono text-xs">{dep.name}</div>
+                  {dep.status !== 'found' && dep.install_hint && (
+                    <div className="text-xs text-gray-400 font-mono mt-0.5">{dep.install_hint}</div>
+                  )}
+                </td>
                 <td className="py-2 pr-4">
                   <DependencyBadge dependency={dep} />
                 </td>
-                <td className="py-2 pr-4 text-xs text-gray-500 font-mono truncate max-w-[180px]">
+                <td className="py-2 text-xs text-gray-500 font-mono truncate max-w-[180px]">
                   {dep.version ?? '—'}
-                </td>
-                <td className="py-2 text-xs text-gray-400 font-mono">
-                  {dep.status !== 'found' ? dep.install_hint : ''}
                 </td>
               </tr>
             ))}

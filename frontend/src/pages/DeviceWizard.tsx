@@ -11,6 +11,7 @@ import {
 } from '../lib/api'
 import { StageProgress } from '../components/StageProgress'
 import { PhotoUpload } from '../components/PhotoUpload'
+import { DeviceIcon } from '../components/DeviceIcon'
 import { CatalogStage } from '../stages/CatalogStage'
 import { VerifyStage } from '../stages/VerifyStage'
 import { MigrateStage } from '../stages/MigrateStage'
@@ -85,7 +86,15 @@ export function DeviceWizard() {
   })
 
   if (isLoading || !device) {
-    return <div className="p-8 text-gray-500">Loading...</div>
+    return (
+      <div className="p-8 flex items-center gap-2 text-gray-400">
+        <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+        </svg>
+        Loading…
+      </div>
+    )
   }
 
   const photoUrl = device.photo_path
@@ -111,15 +120,16 @@ export function DeviceWizard() {
   }
 
   const panelClass = (active: boolean) =>
-    `border rounded-lg p-5 mt-4 ${active ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100 opacity-50'}`
+    `border rounded-lg mt-3 ${active ? 'bg-white border-gray-200 p-5' : 'bg-gray-50 border-gray-100'}`
 
-  const placeholder = (step: number, label: string, hint: string) => (
-    <>
-      <h3 className="font-semibold text-gray-400">
-        Step {step} — {label}
-      </h3>
-      <div className="text-xs text-gray-400 mt-1">{hint}</div>
-    </>
+  const placeholder = (step: number, label: string) => (
+    <div className="flex items-center gap-3 px-4 py-3 text-sm text-gray-400">
+      <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <rect x="3" y="11" width="18" height="11" rx="2" />
+        <path d="M7 11V7a5 5 0 0110 0v4" />
+      </svg>
+      <span>Step {step} — {label}</span>
+    </div>
   )
 
   return (
@@ -155,20 +165,15 @@ export function DeviceWizard() {
               {photoUrl ? (
                 <img src={photoUrl} alt={device.name} className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full bg-gray-100 flex items-center justify-center text-3xl">
-                  {device.device_type === 'mac'
-                    ? '💻'
-                    : device.device_type === 'linux'
-                      ? '🐧'
-                      : device.device_type === 'iphone'
-                        ? '📱'
-                        : device.device_type === 'ipad'
-                          ? '📱'
-                          : '💾'}
+                <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                  <DeviceIcon type={device.device_type} className="w-8 h-8 text-gray-400" />
                 </div>
               )}
               <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                <span className="text-white text-xs font-medium">📷</span>
+                <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+                  <circle cx="12" cy="13" r="4" />
+                </svg>
               </div>
             </button>
           )}
@@ -263,7 +268,7 @@ export function DeviceWizard() {
             )}
           </div>
         ) : (
-          placeholder(2, 'Analyze Duplicates', 'Available after cataloging')
+          placeholder(2, 'Analyze Duplicates')
         )}
       </div>
 
@@ -272,7 +277,7 @@ export function DeviceWizard() {
         {MIGRATE_ACTIVE.includes(device.stage) ? (
           <MigrateStage device={device} deviceId={deviceId} />
         ) : (
-          placeholder(3, 'Migrate to Storage', 'Available after duplicates are resolved')
+          placeholder(3, 'Migrate to Storage')
         )}
       </div>
 
@@ -281,7 +286,7 @@ export function DeviceWizard() {
         {VERIFY_ACTIVE.includes(device.stage) ? (
           <VerifyStage device={device} deviceId={deviceId} />
         ) : (
-          placeholder(4, 'Verify', 'Available after migration completes')
+          placeholder(4, 'Verify')
         )}
       </div>
 
@@ -290,7 +295,7 @@ export function DeviceWizard() {
         {WIPE_ACTIVE.includes(device.stage) ? (
           <WipeStage device={device} deviceId={deviceId} />
         ) : (
-          placeholder(5, 'Wipe', 'Available after previous stage completes')
+          placeholder(5, 'Wipe')
         )}
       </div>
 
@@ -299,7 +304,7 @@ export function DeviceWizard() {
         {RECYCLE_ACTIVE.includes(device.stage) ? (
           <RecycleStage device={device} deviceId={deviceId} />
         ) : (
-          placeholder(6, 'Recycle', 'Available after previous stage completes')
+          placeholder(6, 'Recycle')
         )}
       </div>
     </div>

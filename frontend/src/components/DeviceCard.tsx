@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { getDupStats, getFileEntries, getDevicePhotoUrl } from '../lib/api'
+import { DeviceIcon } from './DeviceIcon'
 import type { Device, DeviceStage } from '../types/api'
 
 const STAGE_LABELS: Partial<Record<DeviceStage, string>> = {
@@ -18,15 +19,6 @@ const STAGE_LABELS: Partial<Record<DeviceStage, string>> = {
   recycled: 'Recycled ✓',
 }
 
-const TYPE_ICON: Record<string, string> = {
-  mac: '💻',
-  linux: '🖥',
-  iphone: '📱',
-  ipad: '📲',
-  usb_drive: '🗂',
-  hard_drive: '💾',
-  network_volume: '📦',
-}
 
 const POST_CATALOG: DeviceStage[] = [
   'cataloged',
@@ -92,7 +84,6 @@ function DeviceCardStats({ device }: { device: Device }) {
 
 export function DeviceCard({ device }: { device: Device }) {
   const action = nextAction(device)
-  const icon = TYPE_ICON[device.device_type] ?? '📦'
   const stageLabel = STAGE_LABELS[device.stage] ?? device.stage
 
   return (
@@ -106,7 +97,7 @@ export function DeviceCard({ device }: { device: Device }) {
               className="w-10 h-10 rounded object-cover shrink-0"
             />
           ) : (
-            <span className="text-lg leading-none mt-0.5">{icon}</span>
+            <DeviceIcon type={device.device_type} className="w-8 h-8 shrink-0 mt-0.5" />
           )}
           <div className="min-w-0 flex-1">
             <div className="font-medium text-gray-900 truncate text-sm">{device.name}</div>
