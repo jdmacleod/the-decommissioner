@@ -124,7 +124,7 @@ describe('VerifyStage', () => {
     vi.mocked(getVerifyDiff).mockResolvedValue(cleanDiff)
     render(makeDevice({ stage: 'verified' }))
     await waitFor(() => screen.getByText(/abc12345/))
-    expect(screen.getByText(/2.00 GB/)).toBeInTheDocument()
+    expect(screen.getByText(/1\.86 GB/)).toBeInTheDocument()
   })
 
   it('does not show missing paths table when no discrepancy', async () => {

@@ -118,14 +118,23 @@ export function DuplicateResolver() {
             {stats && (
               <>
                 <div className="flex items-center gap-2 mb-1">
-                  <div
-                    className="h-2 rounded-full bg-green-500 transition-all"
-                    style={{
-                      width: `${stats.total > 0 ? (stats.resolved / stats.total) * 100 : 0}%`,
-                      minWidth: 4,
-                    }}
-                  />
-                  <div className="h-2 rounded-full bg-gray-200 flex-1" />
+                  <div className="relative h-2 rounded-full bg-gray-200 flex-1 overflow-hidden">
+                    <div
+                      role="progressbar"
+                      aria-valuenow={
+                        stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0
+                      }
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      className="absolute inset-y-0 left-0 rounded-full bg-green-500 transition-all"
+                      style={{
+                        width: `${stats.total > 0 ? (stats.resolved / stats.total) * 100 : 0}%`,
+                      }}
+                    />
+                  </div>
+                  <span className="text-xs text-gray-500 tabular-nums w-8 text-right">
+                    {stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0}%
+                  </span>
                 </div>
                 <div className="text-xs text-gray-500">
                   {stats.resolved.toLocaleString()} resolved · {stats.unresolved.toLocaleString()}{' '}

@@ -4,12 +4,14 @@ import { JobLog } from '../components/JobLog'
 
 type ESListener = (e: MessageEvent) => void
 type DoneListener = () => void
+type ProgressListener = (e: MessageEvent) => void
 
 class MockEventSource {
   static instances: MockEventSource[] = []
   onmessage: ESListener | null = null
   onerror: (() => void) | null = null
   private doneListeners: DoneListener[] = []
+  private progressListeners: ProgressListener[] = []
   url: string
 
   constructor(url: string) {
@@ -17,12 +19,18 @@ class MockEventSource {
     MockEventSource.instances.push(this)
   }
 
-  addEventListener(type: string, cb: DoneListener) {
-    if (type === 'done') this.doneListeners.push(cb)
+  addEventListener(type: string, cb: DoneListener | ProgressListener) {
+    if (type === 'done') this.doneListeners.push(cb as DoneListener)
+    if (type === 'progress') this.progressListeners.push(cb as ProgressListener)
   }
 
   fireDone() {
     this.doneListeners.forEach((cb) => cb())
+  }
+
+  fireProgress(data: object) {
+    const event = { data: JSON.stringify(data) } as MessageEvent
+    this.progressListeners.forEach((cb) => cb(event))
   }
 
   close() {}
@@ -98,5 +106,23 @@ describe('JobLog', () => {
       MockEventSource.instances[0].onerror?.()
     })
     expect(screen.queryByText(/Job complete/)).not.toBeInTheDocument()
+  })
+
+  it('shows error banner when connection is lost', async () => {
+    render(<JobLog jobId={1} />)
+    await waitFor(() => expect(MockEventSource.instances.length).toBe(1))
+    await act(async () => {
+      MockEventSource.instances[0].onerror?.()
+    })
+    expect(screen.getByText(/connection lost/i)).toBeInTheDocument()
+  })
+
+  it('shows elapsed time in completion footer', async () => {
+    render(<JobLog jobId={1} />)
+    await waitFor(() => expect(MockEventSource.instances.length).toBe(1))
+    await act(async () => {
+      MockEventSource.instances[0].fireDone()
+    })
+    expect(screen.getByText(/done in/i)).toBeInTheDocument()
   })
 })

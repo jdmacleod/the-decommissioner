@@ -8,18 +8,31 @@ interface JobLogProps {
 }
 
 export function JobLog({ jobId, className = '', height = '300px' }: JobLogProps) {
-  const { lines, done } = useJobStream(jobId)
+  const { lines, done, error } = useJobStream(jobId)
   const [showScrollBtn, setShowScrollBtn] = useState(false)
+  const [elapsedStr, setElapsedStr] = useState('')
+  const startTimeRef = useRef(0)
   const bottomRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const autoScrollRef = useRef(true)
 
-  // Reset auto-scroll when jobId changes
+  // Reset auto-scroll and start time when jobId changes
   useEffect(() => {
     autoScrollRef.current = true
+    startTimeRef.current = Date.now() // eslint-disable-line react-hooks/purity
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setShowScrollBtn(false) // Intentional reset on jobId change
+    setElapsedStr('')
   }, [jobId])
+
+  // Capture elapsed time when job completes
+  useEffect(() => {
+    if (!done) return
+    const ms = Date.now() - startTimeRef.current
+    const min = Math.floor(ms / 60000)
+    const sec = Math.floor((ms % 60000) / 1000)
+    setElapsedStr(min > 0 ? `${min}m ${sec}s` : `${sec}s`)
+  }, [done])
 
   // Auto-scroll unless user has scrolled up
   useEffect(() => {
@@ -38,6 +51,11 @@ export function JobLog({ jobId, className = '', height = '300px' }: JobLogProps)
 
   return (
     <div className={`relative ${className}`}>
+      {error && (
+        <div className="mb-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">
+          Connection lost. The job may still be running — check the device status.
+        </div>
+      )}
       <div
         ref={containerRef}
         onScroll={handleScroll}
@@ -47,9 +65,12 @@ export function JobLog({ jobId, className = '', height = '300px' }: JobLogProps)
         {lines.map((line, i) => (
           <div key={i}>{line}</div>
         ))}
-        {done && <div className="text-gray-500 mt-2">— Job complete —</div>}
+        {done && <div className="text-gray-500 mt-2">— Job complete · Done in {elapsedStr} —</div>}
         <div ref={bottomRef} />
       </div>
+      <span role="status" aria-live="polite" className="sr-only">
+        {done ? `Finished in ${elapsedStr}.` : error ? 'Stream disconnected.' : ''}
+      </span>
       {showScrollBtn && (
         <button
           onClick={() => {

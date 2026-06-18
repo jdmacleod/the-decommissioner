@@ -1,5 +1,6 @@
 """Tests for SubprocessRunner: execution, status updates, cancellation, replay."""
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -122,6 +123,34 @@ async def test_set_status_nonexistent_job(runner: SubprocessRunner) -> None:
     from app.models.enums import JobStatus
 
     await runner._set_status(99999, JobStatus.completed)  # should not raise
+
+
+async def test_emit_progress_writes_sentinel(
+    runner: SubprocessRunner, session: Session, tmp_data_dir: Path
+) -> None:
+    d = make_device(session)
+    j = make_job(session, d.id)
+
+    await runner.emit_progress(j.id, {"percent": 50})
+
+    log = runner.log_path_for(j.id)
+    assert log.exists()
+    sentinel_lines = [ln for ln in log.read_text().splitlines() if ln.startswith("PROGRESS:")]
+    assert len(sentinel_lines) == 1
+    assert json.loads(sentinel_lines[0][9:]) == {"percent": 50}
+
+
+async def test_emit_progress_disk_error_is_silent(
+    runner: SubprocessRunner, session: Session, monkeypatch: Any
+) -> None:
+    d = make_device(session)
+    j = make_job(session, d.id)
+
+    def _fail(*args: Any, **kwargs: Any) -> Any:
+        raise OSError("disk full")
+
+    monkeypatch.setattr("builtins.open", _fail)
+    await runner.emit_progress(j.id, {"percent": 50})  # should not raise
 
 
 async def test_run_generic_exception(

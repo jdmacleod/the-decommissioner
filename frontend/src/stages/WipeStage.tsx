@@ -9,7 +9,63 @@ import {
   updateDevice,
 } from '../lib/api'
 import { JobLog } from '../components/JobLog'
+import { useJobStream } from '../lib/stream'
 import type { Device, StorageType, WipeJobMetadata } from '../types/api'
+
+function WipeHddProgress({
+  effectiveJobId,
+  wipeMetadata,
+}: {
+  effectiveJobId: number | null
+  wipeMetadata: WipeJobMetadata
+}) {
+  const { progress } = useJobStream(effectiveJobId)
+  const pct = progress?.percent ?? null
+  const eta = progress?.eta_seconds ?? null
+
+  const etaStr =
+    eta == null
+      ? 'estimating…'
+      : eta < 60
+        ? `${eta}s remaining`
+        : `${Math.floor(eta / 60)}m ${eta % 60}s remaining`
+
+  return (
+    <>
+      <h3 className="font-semibold text-gray-800 mb-3">Step 5 — Wiping Drive…</h3>
+      <div className="text-sm text-blue-600 mb-3">
+        Wipe in progress — do not disconnect the drive.
+      </div>
+      {wipeMetadata.block_device && (
+        <div className="text-xs text-gray-500 font-mono mb-2">
+          Block device: {wipeMetadata.block_device}
+        </div>
+      )}
+      {wipeMetadata.method && (
+        <div className="text-xs text-gray-500 mb-3">Method: {wipeMetadata.method}</div>
+      )}
+      {pct !== null && (
+        <div className="mb-3">
+          <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+            <span>{pct}%</span>
+            <span>{etaStr}</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div
+              role="progressbar"
+              aria-valuenow={pct}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              className="bg-orange-500 h-2 rounded-full transition-all duration-500"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        </div>
+      )}
+      {effectiveJobId && <JobLog jobId={effectiveJobId} />}
+    </>
+  )
+}
 
 // Keep in sync with APPLE_DEVICE_TYPES in backend/app/engines/wipe.py
 const APPLE_TYPES = ['mac', 'iphone', 'ipad', 'network_volume'] as const
@@ -143,23 +199,7 @@ export function WipeStage({ device, deviceId }: WipeStageProps) {
 
   // ── Wiping stage — overwrite job log (HDD / unknown) ─────────────────────
   if (device.stage === 'wiping') {
-    return (
-      <>
-        <h3 className="font-semibold text-gray-800 mb-3">Step 5 — Wiping Drive…</h3>
-        <div className="text-sm text-blue-600 mb-3">
-          Wipe in progress — do not disconnect the drive.
-        </div>
-        {wipeMetadata.block_device && (
-          <div className="text-xs text-gray-500 font-mono mb-2">
-            Block device: {wipeMetadata.block_device}
-          </div>
-        )}
-        {wipeMetadata.method && (
-          <div className="text-xs text-gray-500 mb-3">Method: {wipeMetadata.method}</div>
-        )}
-        {effectiveJobId && <JobLog jobId={effectiveJobId} />}
-      </>
-    )
+    return <WipeHddProgress effectiveJobId={effectiveJobId} wipeMetadata={wipeMetadata} />
   }
 
   // ── Apple: verified stage — start checklist ───────────────────────────────

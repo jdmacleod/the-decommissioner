@@ -52,7 +52,13 @@ beforeEach(() => {
       checked_at: '',
     },
   ])
-  vi.mocked(getFileEntries).mockResolvedValue({ items: [], total: 1204, page: 0, limit: 1 })
+  vi.mocked(getFileEntries).mockResolvedValue({
+    items: [],
+    total: 1204,
+    total_bytes: 0,
+    page: 0,
+    limit: 1,
+  })
   vi.mocked(triggerJob).mockResolvedValue({ job_id: 42, status: 'pending' })
   vi.mocked(clearStaging).mockResolvedValue(makeDevice())
 })

@@ -26,6 +26,7 @@ class FileEntryRead(BaseModel):
 class FileEntryPage(BaseModel):
     items: list[FileEntryRead]
     total: int
+    total_bytes: int
     page: int
     limit: int
 
@@ -50,11 +51,15 @@ def list_file_entries(
     if search:
         stmt = stmt.where(FileEntry.path.contains(search))
 
-    total = session.exec(select(func.count()).select_from(stmt.subquery())).one()
+    subq = stmt.subquery()
+    agg = session.exec(
+        select(func.count(), func.coalesce(func.sum(subq.c.size_bytes), 0)).select_from(subq)
+    ).one()
+    total, total_bytes = int(agg[0]), int(agg[1])
 
     items = session.exec(stmt.offset(page * limit).limit(limit)).all()
 
-    return FileEntryPage(items=items, total=total, page=page, limit=limit)
+    return FileEntryPage(items=items, total=total, total_bytes=total_bytes, page=page, limit=limit)
 
 
 class StatusPatch(BaseModel):

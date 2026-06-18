@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { getDupStats, getFileEntries, getDevicePhotoUrl } from '../lib/api'
 import { DeviceIcon } from './DeviceIcon'
 import { Button } from '@/components/ui/button'
+import { formatBytes } from '../lib/utils'
 import type { Device, DeviceStage } from '../types/api'
 
 const STAGE_LABELS: Partial<Record<DeviceStage, string>> = {
@@ -71,7 +72,12 @@ function DeviceCardStats({ device }: { device: Device }) {
 
   return (
     <div className="mt-2 text-xs text-gray-400 space-y-0.5">
-      {fileCountPage && <div>{fileCountPage.total.toLocaleString()} files</div>}
+      {fileCountPage && (
+        <div>
+          {fileCountPage.total.toLocaleString()} files
+          {fileCountPage.total_bytes > 0 ? ` · ${formatBytes(fileCountPage.total_bytes)}` : ''}
+        </div>
+      )}
       {dupStats && dupStats.total > 0 && (
         <div>
           {dupStats.total} dup group{dupStats.total !== 1 ? 's' : ''}

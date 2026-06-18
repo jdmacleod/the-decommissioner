@@ -30,7 +30,13 @@ const makeDevice = (overrides = {}) => ({
 beforeEach(() => {
   vi.mocked(getDevices).mockResolvedValue([])
   vi.mocked(getDupStats).mockResolvedValue({ total: 0, resolved: 0, unresolved: 0 })
-  vi.mocked(getFileEntries).mockResolvedValue({ items: [], total: 0, page: 0, limit: 1 })
+  vi.mocked(getFileEntries).mockResolvedValue({
+    items: [],
+    total: 0,
+    total_bytes: 0,
+    page: 0,
+    limit: 1,
+  })
 })
 
 describe('Dashboard', () => {

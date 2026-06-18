@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from sqlmodel import Session, select
 
-from app.engines.migrate import _parse_backup_summary, run_migrate
+from app.engines.migrate import _compute_eta, _parse_backup_summary, run_migrate
 from app.models.enums import DeviceStage, FileStatus, JobStatus
 from tests.conftest import make_device, make_job, make_storage_target
 
@@ -34,6 +34,27 @@ def runner_fixture(engine, tmp_data_dir) -> object:
             yield s
 
     return SubprocessRunner(factory)
+
+
+# ── _compute_eta ────────────────────────────────────────────────────────────
+
+
+def test_compute_eta_zero_elapsed() -> None:
+    assert _compute_eta(500_000, 1_000_000, 0.0) is None
+
+
+def test_compute_eta_zero_bytes_done() -> None:
+    assert _compute_eta(0, 1_000_000, 60.0) is None
+
+
+def test_compute_eta_zero_total_bytes() -> None:
+    assert _compute_eta(500_000, 0, 60.0) is None
+
+
+def test_compute_eta_normal() -> None:
+    # 500 KB done in 60s → throughput 500 KB/s → 500 KB remaining → ~60s ETA
+    result = _compute_eta(500_000, 1_000_000, 60.0)
+    assert result == 60
 
 
 # ── _parse_backup_summary ────────────────────────────────────────────────────
@@ -169,6 +190,55 @@ async def test_run_migrate_no_snapshot_id_skips_insert(
     from app.models.snapshot import Snapshot
 
     assert session.exec(select(Snapshot)).first() is None
+
+
+async def test_run_migrate_emits_progress_for_status_lines(
+    session: Session, source_dir: Path, runner, monkeypatch
+) -> None:
+    device = make_device(session, source_path=str(source_dir))
+    job = make_job(session, device.id)
+    target = make_storage_target(session)
+
+    status_line = json.dumps(
+        {
+            "message_type": "status",
+            "percent_done": 0.5,
+            "files_done": 5,
+            "total_files": 10,
+            "bytes_done": 512,
+            "total_bytes": 1024,
+        }
+    )
+    summary_line = json.dumps(
+        {
+            "message_type": "summary",
+            "snapshot_id": "aabbccdd11223344",
+            "files_new": 10,
+            "files_changed": 0,
+            "files_unmodified": 0,
+            "total_bytes_processed": 1024,
+            "data_added": 1024,
+        }
+    )
+
+    progress_calls: list[dict] = []
+
+    async def fake_emit(job_id: int, data: dict) -> None:
+        progress_calls.append(data)
+
+    monkeypatch.setattr(runner, "emit_progress", fake_emit)
+
+    async def fake_run(job_id, cmd, **kwargs):
+        yield status_line + "\n"
+        yield summary_line + "\n"
+
+    monkeypatch.setattr(runner, "run", fake_run)
+
+    await run_migrate(job.id, device, target, session, runner)
+
+    assert len(progress_calls) == 1
+    assert progress_calls[0]["percent_done"] == 0.5
+    assert progress_calls[0]["bytes_done"] == 512
 
 
 async def test_run_migrate_raises_if_no_source(session: Session, runner) -> None:

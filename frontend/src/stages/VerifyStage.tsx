@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getSnapshots, getVerifyDiff } from '../lib/api'
+import { formatBytes } from '../lib/utils'
 import type { Device } from '../types/api'
 
 interface VerifyStageProps {
@@ -103,9 +104,9 @@ export function VerifyStage({ device, deviceId }: VerifyStageProps) {
                 {latestSnapshot.restic_snapshot_id}
               </code>
               <span className="text-gray-400">Total size</span>
-              <span>{(latestSnapshot.total_bytes / 1e9).toFixed(2)} GB</span>
+              <span>{formatBytes(latestSnapshot.total_bytes)}</span>
               <span className="text-gray-400">Added (net)</span>
-              <span>{(latestSnapshot.added_bytes / 1e9).toFixed(2)} GB</span>
+              <span>{formatBytes(latestSnapshot.added_bytes)}</span>
             </div>
             {!hasDiscrepancy && (
               <div className="flex items-center gap-1.5 text-xs text-green-700 mt-2">

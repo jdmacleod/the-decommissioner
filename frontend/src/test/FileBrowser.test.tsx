@@ -52,6 +52,7 @@ const makeEntry = (id: number, path: string, status: FileStatus = 'pending') => 
 const mockPage = {
   items: [makeEntry(1, '/data/file1.txt'), makeEntry(2, '/data/photo.jpg', 'keep')],
   total: 2,
+  total_bytes: 2000,
   page: 0,
   limit: 500,
 }
@@ -140,7 +141,13 @@ describe('FileBrowser', () => {
   })
 
   it('shows 0 files when empty', async () => {
-    vi.mocked(getFileEntries).mockResolvedValue({ items: [], total: 0, page: 0, limit: 500 })
+    vi.mocked(getFileEntries).mockResolvedValue({
+      items: [],
+      total: 0,
+      total_bytes: 0,
+      page: 0,
+      limit: 500,
+    })
     renderWithProviders(<FileBrowser />, {
       initialPath: '/devices/1/files',
       routePath: '/devices/:id/files',

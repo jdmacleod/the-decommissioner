@@ -4,17 +4,27 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MigrateStage } from '../stages/MigrateStage'
 import { renderWithProviders } from './helpers'
 import type { Device, StorageTarget } from '../types/api'
+import type { JobStreamState, ProgressData } from '../lib/stream'
 
 vi.mock('../lib/api', () => ({
   getStorageTargets: vi.fn(),
   triggerJob: vi.fn(),
+  getDeviceJobs: vi.fn(),
+  getSnapshots: vi.fn(),
+}))
+
+const mockStreamState: JobStreamState = { lines: [], done: false, error: false, progress: null }
+
+vi.mock('../lib/stream', () => ({
+  useJobStream: vi.fn(() => mockStreamState),
 }))
 
 vi.mock('../components/JobLog', () => ({
   JobLog: ({ jobId }: { jobId: number }) => <div data-testid={`job-log-${jobId}`}>JobLog</div>,
 }))
 
-import { getStorageTargets, triggerJob } from '../lib/api'
+import { getStorageTargets, triggerJob, getDeviceJobs, getSnapshots } from '../lib/api'
+import { useJobStream } from '../lib/stream'
 
 const makeDevice = (overrides: Partial<Device> = {}): Device => ({
   id: 1,
@@ -45,6 +55,8 @@ const makeTarget = (overrides: Partial<StorageTarget> = {}): StorageTarget => ({
 beforeEach(() => {
   vi.mocked(getStorageTargets).mockResolvedValue([makeTarget()])
   vi.mocked(triggerJob).mockResolvedValue({ job_id: 42, status: 'pending' })
+  vi.mocked(getDeviceJobs).mockResolvedValue([])
+  vi.mocked(getSnapshots).mockResolvedValue([])
 })
 
 const render = (device: Device) =>
@@ -123,5 +135,62 @@ describe('MigrateStage', () => {
     render(makeDevice())
     await waitFor(() => screen.getByText(/Repo A/))
     expect(screen.getByText(/Repo B/)).toBeInTheDocument()
+  })
+
+  it('recovers job ID on page refresh when stage is migrating', async () => {
+    vi.mocked(getDeviceJobs).mockResolvedValue([
+      {
+        id: 99,
+        device_id: 1,
+        job_type: 'migrate',
+        status: 'in_progress',
+        started_at: null,
+        completed_at: null,
+        exit_code: null,
+        error_message: null,
+        log_path: '',
+        job_metadata: null,
+        created_at: '',
+      },
+    ])
+    render(makeDevice({ stage: 'migrating' }))
+    await waitFor(() => screen.getByTestId('job-log-99'))
+  })
+
+  it('shows progress bar at 50% when SSE fires progress event', async () => {
+    const progress: ProgressData = { percent_done: 0.5, eta_seconds: 120 }
+    vi.mocked(useJobStream).mockReturnValue({
+      lines: [],
+      done: false,
+      error: false,
+      progress,
+    })
+    render(makeDevice({ stage: 'migrating' }))
+    await waitFor(() => {
+      const bar = document.querySelector('[role="progressbar"]')
+      expect(bar).toBeInTheDocument()
+      expect(bar).toHaveAttribute('aria-valuenow', '50')
+    })
+  })
+
+  it('shows snapshot stats in completion banner', async () => {
+    vi.mocked(getSnapshots).mockResolvedValue([
+      {
+        id: 1,
+        device_id: 1,
+        job_id: 1,
+        storage_target_id: 1,
+        restic_snapshot_id: 'abc12345',
+        file_count: 1234,
+        total_bytes: 5368709120,
+        added_bytes: 1073741824,
+        tags: null,
+        taken_at: '',
+        verified_at: null,
+      },
+    ])
+    render(makeDevice({ stage: 'migrated' }))
+    await waitFor(() => screen.getByText(/1,234 files/))
+    expect(screen.getByText(/5\.00 GB/)).toBeInTheDocument()
   })
 })

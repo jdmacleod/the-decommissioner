@@ -78,6 +78,7 @@ export interface FileEntry {
 export interface FileEntryPage {
   items: FileEntry[]
   total: number
+  total_bytes: number
   page: number
   limit: number
 }

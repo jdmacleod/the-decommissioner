@@ -1,4 +1,6 @@
 import asyncio
+import json
+import logging
 import os
 from collections.abc import AsyncIterator
 from datetime import datetime
@@ -7,6 +9,8 @@ from pathlib import Path
 from app.core.config import settings
 from app.models.enums import JobStatus
 from app.models.job import Job
+
+logger = logging.getLogger(__name__)
 
 
 class SubprocessRunner:
@@ -98,6 +102,14 @@ class SubprocessRunner:
 
         finally:
             self._cancel_flags.pop(job_id, None)
+
+    async def emit_progress(self, job_id: int, data: dict) -> None:
+        log_path = self.log_path_for(job_id)
+        try:
+            with open(log_path, "a") as f:
+                f.write(f"PROGRESS:{json.dumps(data)}\n")
+        except OSError as e:
+            logger.warning("emit_progress failed for job %d: %s", job_id, e)
 
     async def replay(self, job_id: int) -> AsyncIterator[str]:
         log_path = self.log_path_for(job_id)

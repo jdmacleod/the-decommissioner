@@ -39,6 +39,24 @@ def test_list_file_entries(client: TestClient, session: Session) -> None:
     body = r.json()
     assert body["total"] == 3
     assert len(body["items"]) == 3
+    # entries seeded with size_bytes 100, 200, 300 → total 600
+    assert body["total_bytes"] == 600
+
+
+def test_total_bytes_respects_filter(client: TestClient, session: Session) -> None:
+    from app.models.enums import FileStatus
+
+    d = make_device(session)
+    entries = _seed_entries(session, d.id, 4)  # 100, 200, 300, 400 bytes
+    for e in entries[:2]:
+        e.status = FileStatus.keep
+        session.add(e)
+    session.commit()
+
+    r = client.get(f"/api/file-entries?device_id={d.id}&status=keep")
+    body = r.json()
+    assert body["total"] == 2
+    assert body["total_bytes"] == 300  # 100 + 200
 
 
 def test_list_filter_by_status(client: TestClient, session: Session) -> None:

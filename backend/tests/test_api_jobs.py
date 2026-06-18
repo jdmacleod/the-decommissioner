@@ -126,6 +126,31 @@ def test_update_checklist_not_found(client: TestClient) -> None:
     assert r.status_code == 404
 
 
+def test_stream_progress_event(client: TestClient, session: Session) -> None:
+    """PROGRESS: sentinel in log file is emitted as event: progress."""
+    import json
+
+    from app.core.config import settings
+    from app.models.enums import JobStatus
+
+    d = make_device(session)
+    j = make_job(session, d.id, status=JobStatus.completed)
+
+    log_file = settings.logs_dir / f"job_{j.id}.log"
+    log_file.parent.mkdir(parents=True, exist_ok=True)
+    progress_payload = {"percent_done": 0.47, "eta_seconds": 30}
+    log_file.write_text(f"line one\nPROGRESS:{json.dumps(progress_payload)}\nline two\n")
+
+    with client.stream("GET", f"/api/jobs/{j.id}/stream") as r:
+        assert r.status_code == 200
+        content = r.read().decode()
+
+    assert "event: progress" in content
+    assert '"percent_done": 0.47' in content or '"percent_done":0.47' in content
+    assert "line one" in content
+    assert "PROGRESS:" not in content.replace("event: progress", "")
+
+
 def test_stream_completed_job(client: TestClient, session: Session) -> None:
     from app.core.config import settings
     from app.models.enums import JobStatus

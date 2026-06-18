@@ -32,14 +32,19 @@ async def stream_job_log(job_id: int, request: Request, session: SessionDep):
 
     runner = get_runner(request)
 
+    def _sse_line(line: str) -> str:
+        if line.startswith("PROGRESS:"):
+            return f"event: progress\ndata: {line[9:].rstrip()}\n\n"
+        return f"data: {line.rstrip()}\n\n"
+
     async def event_generator():
         if job.status in TERMINAL_STATUSES:
             async for line in runner.replay(job_id):
-                yield f"data: {line.rstrip()}\n\n"
+                yield _sse_line(line)
             yield "event: done\ndata: \n\n"
         else:
             async for line in _tail_log(runner.log_path_for(job_id), job_id, session):
-                yield f"data: {line.rstrip()}\n\n"
+                yield _sse_line(line)
             yield "event: done\ndata: \n\n"
 
     return StreamingResponse(

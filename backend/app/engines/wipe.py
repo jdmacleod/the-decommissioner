@@ -1,6 +1,8 @@
 import json
+import re
 import subprocess
 import sys
+from time import monotonic
 
 from sqlmodel import Session
 
@@ -168,8 +170,16 @@ async def _run_disk_wipe(
         session.add(job)
         session.commit()
 
-    async for _ in runner.run(job_id, cmd):
-        pass
+    start_time = monotonic()
+    async for line in runner.run(job_id, cmd):
+        m = re.search(r"(\d+)%", line)
+        if m:
+            pct = int(m.group(1))
+            elapsed = monotonic() - start_time
+            eta: int | None = None
+            if pct > 0:
+                eta = int(elapsed / (pct / 100) * (1 - pct / 100))
+            await runner.emit_progress(job_id, {"percent": pct, "eta_seconds": eta})
 
 
 def _resolve_block_device(mount_point: str) -> str:

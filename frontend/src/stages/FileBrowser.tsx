@@ -169,7 +169,10 @@ export function FileBrowser() {
         </Link>
         <span className="text-gray-300">/</span>
         <span className="text-sm font-medium text-gray-900">File Browser</span>
-        <span className="text-xs text-gray-400 ml-1">{total.toLocaleString()} files</span>
+        <span className="text-xs text-gray-400 ml-1">
+          {total.toLocaleString()} files
+          {data?.total_bytes ? ` · ${formatBytes(data.total_bytes)}` : ''}
+        </span>
         <div className="ml-auto flex items-center gap-2">
           {pendingUpdates.current.size > 0 && (
             <span className="text-xs text-orange-600">{pendingUpdates.current.size} unsaved</span>

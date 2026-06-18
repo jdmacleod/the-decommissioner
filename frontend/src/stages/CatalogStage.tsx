@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getDependencies, getFileEntries, triggerJob, clearStaging } from '../lib/api'
 import { JobLog } from '../components/JobLog'
 import { Button } from '@/components/ui/button'
+import { formatBytes } from '../lib/utils'
 import type { Device, DupStats } from '../types/api'
 
 interface CatalogStageProps {
@@ -27,7 +28,8 @@ export function CatalogStage({ device, deviceId, dupStats }: CatalogStageProps) 
   const { data: fileCountPage } = useQuery({
     queryKey: ['file-entries-count', deviceId],
     queryFn: () => getFileEntries({ device_id: deviceId, limit: 1 }),
-    enabled: ['cataloged', 'analyzing', 'analyzed'].includes(device.stage),
+    enabled: ['cataloging', 'cataloged', 'analyzing', 'analyzed'].includes(device.stage),
+    refetchInterval: device.stage === 'cataloging' ? 3000 : false,
   })
 
   const catalogMutation = useMutation({
@@ -77,6 +79,9 @@ export function CatalogStage({ device, deviceId, dupStats }: CatalogStageProps) 
             <span>✓ Catalog complete</span>
             {fileTotal !== undefined && (
               <span className="text-green-600">· {fileTotal.toLocaleString()} files</span>
+            )}
+            {fileCountPage?.total_bytes !== undefined && fileCountPage.total_bytes > 0 && (
+              <span className="text-green-600">· {formatBytes(fileCountPage.total_bytes)}</span>
             )}
             {dupStats && dupStats.total > 0 && (
               <span className="text-green-600">

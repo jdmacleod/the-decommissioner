@@ -1,6 +1,7 @@
 import json
 import os
 from datetime import datetime
+from time import monotonic
 
 from sqlmodel import Session, select
 
@@ -10,6 +11,13 @@ from app.models.enums import FileStatus
 from app.models.file_entry import FileEntry
 from app.models.snapshot import Snapshot
 from app.models.storage_target import StorageTarget
+
+
+def _compute_eta(bytes_done: int, total_bytes: int, elapsed_seconds: float) -> int | None:
+    if elapsed_seconds == 0 or bytes_done == 0 or total_bytes == 0:
+        return None
+    throughput = bytes_done / elapsed_seconds
+    return round((total_bytes - bytes_done) / throughput)
 
 
 async def run_migrate(
@@ -34,8 +42,33 @@ async def run_migrate(
         env[storage_target.restic_password_env] = pwd_val
 
     raw_lines: list[str] = []
+    start_time = monotonic()
     async for line in runner.run(job_id, cmd, env=env):
         raw_lines.append(line)
+        stripped = line.strip()
+        if stripped.startswith("{"):
+            try:
+                obj = json.loads(stripped)
+            except json.JSONDecodeError:
+                continue
+            if obj.get("message_type") == "status":
+                elapsed = monotonic() - start_time
+                eta = _compute_eta(
+                    int(obj.get("bytes_done", 0)),
+                    int(obj.get("total_bytes", 0)),
+                    elapsed,
+                )
+                await runner.emit_progress(
+                    job_id,
+                    {
+                        "percent_done": obj.get("percent_done", 0),
+                        "files_done": obj.get("files_done", 0),
+                        "total_files": obj.get("total_files", 0),
+                        "bytes_done": obj.get("bytes_done", 0),
+                        "total_bytes": obj.get("total_bytes", 0),
+                        "eta_seconds": eta,
+                    },
+                )
 
     snapshot_id, file_count, total_bytes, added_bytes = _parse_backup_summary(raw_lines)
     if not snapshot_id:

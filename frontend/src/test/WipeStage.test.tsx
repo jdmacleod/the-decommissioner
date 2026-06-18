@@ -18,6 +18,10 @@ vi.mock('../components/JobLog', () => ({
   JobLog: ({ jobId }: { jobId: number }) => <div data-testid={`job-log-${jobId}`}>JobLog</div>,
 }))
 
+vi.mock('../lib/stream', () => ({
+  useJobStream: vi.fn(() => ({ lines: [], done: false, error: false, progress: null })),
+}))
+
 import {
   getDeviceJobs,
   triggerJob,
